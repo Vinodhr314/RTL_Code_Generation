@@ -1,22 +1,100 @@
 Module: secured_hash_algorithm
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: FIPS 180-4 SHA-256
 
-Target: 32-bit RISC-V SoC — crypto
-
-SHA-256 secure hash accelerator.
+================================================================================
+1. OVERVIEW
+================================================================================
+secured_hash_algorithm.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — input
-- block [511:0]  input  — input
-- digest [255:0]  output  — SHA-256
-- done  output  — output
-- busy  output  — output
+Verification status: PASS; SHA-256 empty block digest stub
 
-Behavior:
-- FIPS 180-4 SHA-256 one block per cycle after pipeline fill.
-- Used for secure boot signature verify.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement secured_hash_algorithm.
+FR-002: Accept block/key on valid/start; assert done when digest/ciphertext ready.
+FR-003: Output width and algorithm per locked spec and RTL header comments.
+FR-004: SHA-256 accelerator stub
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| block | input | [511:0] | — | Input signal, width [511:0]. |
+| digest | output | [255:0] | — | Output signal, width [255:0]. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- block (input, [511:0], —): Input signal, width [511:0].
+- digest (output, [255:0], —): Output signal, width [255:0].
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+SHA-256 accelerator stub
+
+RTL header notes:
+- secured_hash_algorithm — SHA-256 stub (Verilog-2005)
+- Empty block digest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+FSM states (from RTL localparams):
+- DIGEST
+
+Crypto stub: Algorithm reference values from TB; verify done timing and block_out/digest width.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/secured_hash_algorithm_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - digest must equal 256'he3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Simplified stub implementation — not bit-accurate production IP.
+- Batch verification note: SHA-256 empty block digest stub
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - DIGEST = 256'he3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

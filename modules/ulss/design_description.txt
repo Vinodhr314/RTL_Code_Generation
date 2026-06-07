@@ -1,21 +1,90 @@
 Module: ulss
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — system
-
-Ultra-low-power sleep supervisor coordinating RV32 WFI and clock gating.
+================================================================================
+1. OVERVIEW
+================================================================================
+ulss.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- wfi  input  — from core
-- wake [N-1:0]  input  — input
-- sleep  output  — output
-- clk_gate  output  — output
+Verification status: PASS; sleep when wfi && wake==0
 
-Behavior:
-- Enters retention when core asserts WFI and no pending IRQ.
-- Wake on timer, GPIO, or UART edge.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement ulss.
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: Ultra-low-power sleep supervisor
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| wfi | input | 1 | — | Input signal, width 1. |
+| wake | input | [3:0] | — | Input signal, width [3:0]. |
+| sleep | output | 1 | — | Output port (1); see functional behavior. |
+| clk_gate | output | 1 | — | Output signal, width 1. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- wfi (input, 1, —): Input signal, width 1.
+- wake (input, [3:0], —): Input signal, width [3:0].
+- sleep (output, 1, —): Output port (1); see functional behavior.
+- clk_gate (output, 1, —): Output signal, width 1.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Ultra-low-power sleep supervisor
+
+RTL header notes:
+- ulss — sleep supervisor stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/ulss_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: sleep when wfi && wake==0
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

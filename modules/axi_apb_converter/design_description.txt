@@ -1,21 +1,170 @@
 Module: axi_apb_converter
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — bus
-
-AXI4 to APB bridge for RV32 peripheral access.
+================================================================================
+1. OVERVIEW
+================================================================================
+AXI4-Lite slave to APB master bridge for single-beat peripheral access.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- aclk  input  — input
-- aresetn  input  — input
-- AXI4  slave  — ports
-- pclk  output  — output
-- presetn  output  — output
-- APB  master  — ports
+Verification status: PASS
 
-Behavior:
-- Translates AXI single-beat or narrow bursts to APB transactions.
-- Typical path: CPU -> AXI -> APB -> UART/GPIO.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement AXI4-Lite slave to APB master bridge for single-beat peripheral access.
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: Bridge: AXI write (AW+W) -> APB SETUP then ACCESS phase write -> B response. AXI read (AR) -> APB SETUP then ACCESS phase read -> R response
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| aclk | input | 1 | — | AXI bus clock; sampled on rising edge. |
+| aresetn | input | 1 | — | AXI active-low reset; clears interface state. |
+| awvalid | input | 1 | active-high | AXI write address channel valid. |
+| awready | output | 1 | — | AXI write address channel ready. |
+| awaddr | input | [31:0] | — | AXI write address. |
+| wvalid | input | 1 | active-high | AXI write data channel valid. |
+| wready | output | 1 | — | AXI write data channel ready. |
+| wdata | input | [31:0] | — | AXI write data. |
+| wstrb | input | [3:0] | — | AXI write byte strobes. |
+| bvalid | output | 1 | — | AXI write response channel valid. |
+| bready | input | 1 | — | AXI write response channel ready. |
+| bresp | output | [1:0] | — | AXI write response code (OKAY=2'b00). |
+| arvalid | input | 1 | active-high | AXI read address channel valid. |
+| arready | output | 1 | — | AXI read address channel ready. |
+| araddr | input | [31:0] | — | AXI read address. |
+| rvalid | output | 1 | — | AXI read data channel valid. |
+| rready | input | 1 | — | AXI read data channel ready. |
+| rdata | output | [31:0] | — | AXI read data. |
+| rresp | output | [1:0] | — | AXI read response code. |
+| pclk | output | 1 | — | APB bus clock; sampled on rising edge. |
+| presetn | output | 1 | — | APB active-low reset; clears registers and deasserts pready. |
+| psel | output | 1 | active-high | APB peripheral select; high during SETUP and ACCESS phases. |
+| penable | output | 1 | active-high | APB enable; low in SETUP, high in ACCESS phase. |
+| pwrite | output | 1 | active-high | APB transfer direction: 1=write, 0=read. |
+| paddr | output | [31:0] | — | APB byte address of the transfer. |
+| pwdata | output | [31:0] | — | APB write data bus (32-bit). |
+| prdata | input | [31:0] | — | APB read data bus (32-bit). |
+| pready | input | 1 | — | APB slave ready; 1 completes data phase. |
+
+3.2 Signal Descriptions
+- aclk (input, 1, —): AXI bus clock; sampled on rising edge.
+- aresetn (input, 1, —): AXI active-low reset; clears interface state.
+- awvalid (input, 1, active-high): AXI write address channel valid.
+- awready (output, 1, —): AXI write address channel ready.
+- awaddr (input, [31:0], —): AXI write address.
+- wvalid (input, 1, active-high): AXI write data channel valid.
+- wready (output, 1, —): AXI write data channel ready.
+- wdata (input, [31:0], —): AXI write data.
+- wstrb (input, [3:0], —): AXI write byte strobes.
+- bvalid (output, 1, —): AXI write response channel valid.
+- bready (input, 1, —): AXI write response channel ready.
+- bresp (output, [1:0], —): AXI write response code (OKAY=2'b00).
+- arvalid (input, 1, active-high): AXI read address channel valid.
+- arready (output, 1, —): AXI read address channel ready.
+- araddr (input, [31:0], —): AXI read address.
+- rvalid (output, 1, —): AXI read data channel valid.
+- rready (input, 1, —): AXI read data channel ready.
+- rdata (output, [31:0], —): AXI read data.
+- rresp (output, [1:0], —): AXI read response code.
+- pclk (output, 1, —): APB bus clock; sampled on rising edge.
+- presetn (output, 1, —): APB active-low reset; clears registers and deasserts pready.
+- psel (output, 1, active-high): APB peripheral select; high during SETUP and ACCESS phases.
+- penable (output, 1, active-high): APB enable; low in SETUP, high in ACCESS phase.
+- pwrite (output, 1, active-high): APB transfer direction: 1=write, 0=read.
+- paddr (output, [31:0], —): APB byte address of the transfer.
+- pwdata (output, [31:0], —): APB write data bus (32-bit).
+- prdata (input, [31:0], —): APB read data bus (32-bit).
+- pready (input, 1, —): APB slave ready; 1 completes data phase.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single pclk (APB).
+Reset: presetn active-low asynchronous assert, synchronous deassert.
+APB timing: SETUP cycle (psel=1, penable=0) then ACCESS cycle (psel=1, penable=1).
+DV note: Sample prdata/pready on posedge pclk during ACCESS phase.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Bridge: AXI write (AW+W) -> APB SETUP then ACCESS phase write -> B response. AXI read (AR) -> APB SETUP then ACCESS phase read -> R response. pclk = aclk, presetn = aresetn.
+
+RTL header notes:
+- AXI4-Lite to APB bridge
+- Translates AXI single-beat writes/reads to APB SETUP+ACCESS transactions
+- Verilog-2005 synthesizable
+- AXI4-Lite slave — write address
+- AXI4-Lite slave — write data
+- AXI4-Lite slave — write response
+- AXI4-Lite slave — read address
+- AXI4-Lite slave — read data
+
+FSM states (from RTL localparams):
+- ST_IDLE → ST_AW_W
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/axi_apb_converter_tb.v
+
+6.2 Test Scenarios
+  TS-01: APB slave: respond with pready one cycle after ACCESS starts
+  TS-02: AXI write:
+  TS-03: DUT only asserts awready/wready after seeing awvalid/wvalid.
+  TS-04: Drive valid first, then wait for ready (same pattern as arbiter).
+  TS-05: Wait for bvalid BEFORE setting bready (avoid NBA suppression).
+  TS-06: DUT will assert awready and wready when it sees valid in ST_IDLE
+  TS-07: Wait for write response — don't set bready until bvalid is seen
+  TS-08: AXI read: same pattern
+  TS-09: Test 1: AXI write -> APB write
+  TS-10: Test 2: AXI read -> APB read returns BEEF_0010
+  TS-11: Test 3: write at 0x20, read returns BEEF_0020
+  TS-12: Test 4: sequential reads
+
+6.3 Expected Results / Scoreboard
+  - rd must equal (32'hBEEF_0000 | 32'h10
+  - rd must equal (32'hBEEF_0000 | 32'h20
+  - rd must equal (32'hBEEF_0000 | 32'h04
+  - rd must equal 32'hBEEF_0000
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: axi_read, axi_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).
+- Localparams:
+  - ST_IDLE = 3'd0
+  - ST_AW_W = 3'd1
+  - ST_APB_WR_SETUP = 3'd2
+  - ST_APB_WR_ACCESS = 3'd3
+  - ST_AXI_WRESP = 3'd4
+  - ST_APB_RD_SETUP = 3'd5
+  - ST_APB_RD_ACCESS = 3'd6
+  - ST_AXI_RRESP = 3'd7
+- FSM encoded with 2 states.

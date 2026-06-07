@@ -1,18 +1,88 @@
 Module: endian_converter
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — datapath
-
-Byte/half-word endian swap for RV32 BE/LE bus bridging.
+================================================================================
+1. OVERVIEW
+================================================================================
+Combinational byte/half-word endian swap for RV32 BE/LE bridging..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- din [31:0]  input  — input
-- dout [31:0]  output  — output
-- mode [1:0]  input  — B/H/W swap
+Verification status: PASS; Combinational byte/half swap by mode
 
-Behavior:
-- Converts 32-bit word between little-endian core and big-endian peripheral.
-- No clock; pure combinational swap network.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Combinational byte/half-word endian swap for RV32 BE/LE bridging..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: mode=00 byte swap, mode=01 half-word swap, mode=10/11 pass-through..
+FR-005: mode=00 byte swap, mode=01 half-word swap, mode=10/11 pass-through.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| din | input | [31:0] | — | FIFO write data input. |
+| dout | output | [31:0] | — | FIFO read data output. |
+| mode | input | [1:0] | — | Operating mode select. |
+
+3.2 Signal Descriptions
+- din (input, [31:0], —): FIFO write data input.
+- dout (output, [31:0], —): FIFO read data output.
+- mode (input, [1:0], —): Operating mode select.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+mode=00 byte swap, mode=01 half-word swap, mode=10/11 pass-through.
+
+RTL header notes:
+- endian_converter — combinational byte/half-word swap (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/endian_converter_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - dout must equal 32'h78563412
+  - dout must equal 32'h56781234
+  - dout must equal 32'h12345678
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: Combinational byte/half swap by mode
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

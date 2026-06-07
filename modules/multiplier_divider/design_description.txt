@@ -1,22 +1,104 @@
 Module: multiplier_divider
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: MMIO accelerator control (start/done/busy/result/irq)
 
-Target: 32-bit RISC-V SoC — datapath
-
-Combined 32x32 multiplier and divider unit for RV32 M-extension.
+================================================================================
+1. OVERVIEW
+================================================================================
+RV32 M-extension mul/div unit..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- op [2:0]  input  — MUL/DIV/REM
-- a [31:0]  input  — input
-- b [31:0]  input  — input
-- result [31:0]  output  — output
-- done  output  — output
+Verification status: PASS; FSM IDLE/BUSY/FIN; TB waits for done pulse
 
-Behavior:
-- Shared datapath for MUL, MULH, DIV, REM, DIVU, REMU.
-- Single issue port from RV32 execute stage.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement RV32 M-extension mul/div unit..
+FR-002: Assert busy after start; deassert when done.
+FR-003: Present final result on result port when done=1.
+FR-004: Pulse irq for one cycle coincident with completion (unless RTL notes otherwise).
+FR-005: base_addr and length may be ignored in stub model — document actual RTL behavior.
+FR-006: op=0 MUL, op=2 DIV; completes in 4 cycles.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| op | input | [2:0] | — | Input port ([2:0]); see functional behavior. |
+| a | input | [31:0] | — | Input signal, width [31:0]. |
+| b | input | [31:0] | — | Input signal, width [31:0]. |
+| result | output | [31:0] | — | Accelerator result word read after done. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- op (input, [2:0], —): Input port ([2:0]); see functional behavior.
+- a (input, [31:0], —): Input signal, width [31:0].
+- b (input, [31:0], —): Input signal, width [31:0].
+- result (output, [31:0], —): Accelerator result word read after done.
+- done (output, 1, —): Status flag: operation completed successfully.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+op=0 MUL, op=2 DIV; completes in 4 cycles.
+
+RTL header notes:
+- multiplier_divider — M-extension stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- OP_MUL → OP_DIV → IDLE → BUSY → FIN
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/multiplier_divider_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - result must equal 32'd42
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Stub model: graph/data may be hardcoded; base_addr/length inputs ignored.
+- Batch verification note: FSM IDLE/BUSY/FIN; TB waits for done pulse
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - OP_MUL = 3'd0
+  - OP_DIV = 3'd2
+  - IDLE = 2'd0
+  - BUSY = 2'd1
+  - FIN = 2'd2
+- FSM encoded with 5 states.

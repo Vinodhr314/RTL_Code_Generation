@@ -1,21 +1,93 @@
 Module: coremark_benchmark
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: MMIO accelerator control (start/done/busy/result/irq)
 
-Target: 32-bit RISC-V SoC — validation
-
-Hardware performance counter snapshot block for CoreMark runs on RV32.
+================================================================================
+1. OVERVIEW
+================================================================================
+Hardware performance counter snapshot for CoreMark runs..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — input
-- stop  input  — input
-- cycle_cnt [31:0]  output  — output
-- instret_cnt [31:0]  output  — output
+Verification status: PASS
 
-Behavior:
-- Latches mcycle/minstret at CoreMark start/stop GPIO triggers.
-- Read via CSR or memory map for score reporting.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Hardware performance counter snapshot for CoreMark runs..
+FR-002: Assert busy after start; deassert when done.
+FR-003: Present final result on result port when done=1.
+FR-004: Pulse irq for one cycle coincident with completion (unless RTL notes otherwise).
+FR-005: base_addr and length may be ignored in stub model — document actual RTL behavior.
+FR-006: On start: reset cycle_cnt and instret_cnt. Each clock while running increments both. On stop: latch counts (hold until next start).
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| stop | input | 1 | — | Command to halt an in-progress operation. |
+| cycle_cnt | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+| instret_cnt | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- stop (input, 1, —): Command to halt an in-progress operation.
+- cycle_cnt (output, [31:0], —): Output port ([31:0]); see functional behavior.
+- instret_cnt (output, [31:0], —): Output port ([31:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+On start: reset cycle_cnt and instret_cnt. Each clock while running increments both. On stop: latch counts (hold until next start).
+
+RTL header notes:
+- coremark_benchmark — Performance counter snapshot (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/coremark_benchmark_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - cycle_cnt must equal 32'd10
+  - instret_cnt must equal 32'd10
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Stub model: graph/data may be hardcoded; base_addr/length inputs ignored.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

@@ -1,18 +1,205 @@
 Module: axi_top
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — bus
-
-Top-level AXI4 interconnect wrapper for RV32 SoC masters and slaves.
+================================================================================
+1. OVERVIEW
+================================================================================
+AXI4-Lite top-level 1-master/2-slave interconnect. Address bit [24] selects slave: 0=s0, 1=s1..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- aclk  input  — input
-- aresetn  input  — input
-- full  AXI4  — master/slave port bundles
+Verification status: PASS
 
-Behavior:
-- Integrates CPU, DMA, and debug as masters; SRAM, peripherals as slaves.
-- Supports INCR bursts and 32-bit data width.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement AXI4-Lite top-level 1-master/2-slave interconnect. Address bit [24] selects slave: 0=s0, 1=s1..
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: AXI4-Lite 1M:2S interconnect. addr[24]=0 routes to s0, addr[24]=1 routes to s1. Write sel latched on AW handshake; read sel latched on AR ha
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| aclk | input | 1 | — | AXI bus clock; sampled on rising edge. |
+| aresetn | input | 1 | — | AXI active-low reset; clears interface state. |
+| m_awvalid | input | 1 | — | Input signal, width 1. |
+| m_awready | output | 1 | — | Output signal, width 1. |
+| m_awaddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m_wvalid | input | 1 | — | Input signal, width 1. |
+| m_wready | output | 1 | — | Output signal, width 1. |
+| m_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| m_wstrb | input | [3:0] | — | Input signal, width [3:0]. |
+| m_bvalid | output | 1 | — | Output signal, width 1. |
+| m_bready | input | 1 | — | Input signal, width 1. |
+| m_bresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m_arvalid | input | 1 | — | Input signal, width 1. |
+| m_arready | output | 1 | — | Output signal, width 1. |
+| m_araddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m_rvalid | output | 1 | — | Output signal, width 1. |
+| m_rready | input | 1 | — | Input signal, width 1. |
+| m_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| m_rresp | output | [1:0] | — | Output signal, width [1:0]. |
+| s0_awvalid | output | 1 | — | Output signal, width 1. |
+| s0_awready | input | 1 | — | Input signal, width 1. |
+| s0_awaddr | output | [31:0] | — | Output signal, width [31:0]. |
+| s0_wvalid | output | 1 | — | Output signal, width 1. |
+| s0_wready | input | 1 | — | Input signal, width 1. |
+| s0_wdata | output | [31:0] | — | Output signal, width [31:0]. |
+| s0_wstrb | output | [3:0] | — | Output signal, width [3:0]. |
+| s0_bvalid | input | 1 | — | Input signal, width 1. |
+| s0_bready | output | 1 | — | Output signal, width 1. |
+| s0_bresp | input | [1:0] | — | Input signal, width [1:0]. |
+| s0_arvalid | output | 1 | — | Output signal, width 1. |
+| s0_arready | input | 1 | — | Input signal, width 1. |
+| s0_araddr | output | [31:0] | — | Output signal, width [31:0]. |
+| s0_rvalid | input | 1 | — | Input signal, width 1. |
+| s0_rready | output | 1 | — | Output signal, width 1. |
+| s0_rdata | input | [31:0] | — | Input signal, width [31:0]. |
+| s0_rresp | input | [1:0] | — | Input signal, width [1:0]. |
+| s1_awvalid | output | 1 | — | Output signal, width 1. |
+| s1_awready | input | 1 | — | Input signal, width 1. |
+| s1_awaddr | output | [31:0] | — | Output signal, width [31:0]. |
+| s1_wvalid | output | 1 | — | Output signal, width 1. |
+| s1_wready | input | 1 | — | Input signal, width 1. |
+| s1_wdata | output | [31:0] | — | Output signal, width [31:0]. |
+| s1_wstrb | output | [3:0] | — | Output signal, width [3:0]. |
+| s1_bvalid | input | 1 | — | Input signal, width 1. |
+| s1_bready | output | 1 | — | Output signal, width 1. |
+| s1_bresp | input | [1:0] | — | Input signal, width [1:0]. |
+| s1_arvalid | output | 1 | — | Output signal, width 1. |
+| s1_arready | input | 1 | — | Input signal, width 1. |
+| s1_araddr | output | [31:0] | — | Output signal, width [31:0]. |
+| s1_rvalid | input | 1 | — | Input signal, width 1. |
+| s1_rready | output | 1 | — | Output signal, width 1. |
+| s1_rdata | input | [31:0] | — | Input signal, width [31:0]. |
+| s1_rresp | input | [1:0] | — | Input signal, width [1:0]. |
+
+3.2 Signal Descriptions
+- aclk (input, 1, —): AXI bus clock; sampled on rising edge.
+- aresetn (input, 1, —): AXI active-low reset; clears interface state.
+- m_awvalid (input, 1, —): Input signal, width 1.
+- m_awready (output, 1, —): Output signal, width 1.
+- m_awaddr (input, [31:0], —): Input signal, width [31:0].
+- m_wvalid (input, 1, —): Input signal, width 1.
+- m_wready (output, 1, —): Output signal, width 1.
+- m_wdata (input, [31:0], —): Input signal, width [31:0].
+- m_wstrb (input, [3:0], —): Input signal, width [3:0].
+- m_bvalid (output, 1, —): Output signal, width 1.
+- m_bready (input, 1, —): Input signal, width 1.
+- m_bresp (output, [1:0], —): Output signal, width [1:0].
+- m_arvalid (input, 1, —): Input signal, width 1.
+- m_arready (output, 1, —): Output signal, width 1.
+- m_araddr (input, [31:0], —): Input signal, width [31:0].
+- m_rvalid (output, 1, —): Output signal, width 1.
+- m_rready (input, 1, —): Input signal, width 1.
+- m_rdata (output, [31:0], —): Output signal, width [31:0].
+- m_rresp (output, [1:0], —): Output signal, width [1:0].
+- s0_awvalid (output, 1, —): Output signal, width 1.
+- s0_awready (input, 1, —): Input signal, width 1.
+- s0_awaddr (output, [31:0], —): Output signal, width [31:0].
+- s0_wvalid (output, 1, —): Output signal, width 1.
+- s0_wready (input, 1, —): Input signal, width 1.
+- s0_wdata (output, [31:0], —): Output signal, width [31:0].
+- s0_wstrb (output, [3:0], —): Output signal, width [3:0].
+- s0_bvalid (input, 1, —): Input signal, width 1.
+- s0_bready (output, 1, —): Output signal, width 1.
+- s0_bresp (input, [1:0], —): Input signal, width [1:0].
+- s0_arvalid (output, 1, —): Output signal, width 1.
+- s0_arready (input, 1, —): Input signal, width 1.
+- s0_araddr (output, [31:0], —): Output signal, width [31:0].
+- s0_rvalid (input, 1, —): Input signal, width 1.
+- s0_rready (output, 1, —): Output signal, width 1.
+- s0_rdata (input, [31:0], —): Input signal, width [31:0].
+- s0_rresp (input, [1:0], —): Input signal, width [1:0].
+- s1_awvalid (output, 1, —): Output signal, width 1.
+- s1_awready (input, 1, —): Input signal, width 1.
+- s1_awaddr (output, [31:0], —): Output signal, width [31:0].
+- s1_wvalid (output, 1, —): Output signal, width 1.
+- s1_wready (input, 1, —): Input signal, width 1.
+- s1_wdata (output, [31:0], —): Output signal, width [31:0].
+- s1_wstrb (output, [3:0], —): Output signal, width [3:0].
+- s1_bvalid (input, 1, —): Input signal, width 1.
+- s1_bready (output, 1, —): Output signal, width 1.
+- s1_bresp (input, [1:0], —): Input signal, width [1:0].
+- s1_arvalid (output, 1, —): Output signal, width 1.
+- s1_arready (input, 1, —): Input signal, width 1.
+- s1_araddr (output, [31:0], —): Output signal, width [31:0].
+- s1_rvalid (input, 1, —): Input signal, width 1.
+- s1_rready (output, 1, —): Output signal, width 1.
+- s1_rdata (input, [31:0], —): Input signal, width [31:0].
+- s1_rresp (input, [1:0], —): Input signal, width [1:0].
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single aclk (AXI).
+Reset: aresetn active-low.
+AXI handshakes: valid/ready per channel; respect TB task sequencing.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+AXI4-Lite 1M:2S interconnect. addr[24]=0 routes to s0, addr[24]=1 routes to s1. Write sel latched on AW handshake; read sel latched on AR handshake.
+
+RTL header notes:
+- axi_top — AXI4-Lite 1-master / 2-slave interconnect (Verilog-2005)
+- Address bit [24] selects slave: 0 → s0, 1 → s1
+- Write-select latched on AW handshake; read-select latched on AR handshake.
+- Master port (driven by CPU/DMA)
+- Slave 0 port (addr[24]=0)
+- Slave 1 port (addr[24]=1)
+- ----------------------------------------------------------------
+- Write-channel routing: latch slave select on AW handshake
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/axi_top_tb.v
+
+6.2 Test Scenarios
+  TS-01: axi_top testbench — 1M:2S interconnect
+  TS-02: Verifies write and read routing to both slave ports using inline AXI4-Lite slave models.
+  TS-03: Minimal AXI4-Lite slave: 4 x 32-bit registers
+  TS-04: Master port signals
+  TS-05: --- Slave 0 tests (addr[24]=0: base 32'h00000000) ---
+  TS-06: --- Slave 1 tests (addr[24]=1: base 32'h01000000) ---
+  TS-07: --- Cross-check: s0 unchanged after s1 write ---
+  TS-08: --- Cross-check: s1 reg0 unchanged after s0 write to reg1 ---
+  TS-09: --- Byte-strobe write to s0 ---
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'hAAAA_1111
+  - rd must equal 32'hBBBB_2222
+  - rd must equal 32'hCCCC_3333
+  - rd must equal 32'hDDDD_4444
+  - rd[7:0] must equal 8'hAA
+  - rd[31:8] must equal 24'hFF_EE_DD
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: axi_read, axi_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

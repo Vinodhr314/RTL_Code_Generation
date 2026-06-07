@@ -1,19 +1,87 @@
 Module: custom_circuits
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — misc
-
-Placeholder wrapper for ASIC custom/analog-digital mixed IP hooks in SoC.
+================================================================================
+1. OVERVIEW
+================================================================================
+Placeholder wrapper for ASIC custom IP hooks..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- gpio [31:0]  inout  — custom pins
-- status [31:0]  output  — output
+Verification status: PASS
 
-Behavior:
-- Black-box interface for fab-specific custom cells.
-- Document port map per silicon revision.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Placeholder wrapper for ASIC custom IP hooks..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: status reflects gpio input state (read-only mirror). gpio driven high-Z; external TB drives via force..
+FR-005: status reflects gpio input state (read-only mirror). gpio driven high-Z; external TB drives via force.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| gpio | inout | [31:0] | — | Inout port ([31:0]); see functional behavior. |
+| status | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- gpio (inout, [31:0], —): Inout port ([31:0]); see functional behavior.
+- status (output, [31:0], —): Output port ([31:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+status reflects gpio input state (read-only mirror). gpio driven high-Z; external TB drives via force.
+
+RTL header notes:
+- custom_circuits — ASIC custom IP placeholder (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/custom_circuits_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - status must equal 32'hA5A5_1234
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

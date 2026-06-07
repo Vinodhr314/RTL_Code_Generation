@@ -1,25 +1,118 @@
 Module: async_fifo
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: Synchronous FIFO interface
 
-Target: 32-bit RISC-V SoC — infrastructure
-
-Asynchronous FIFO for clock-domain crossing between RV32 domains.
+================================================================================
+1. OVERVIEW
+================================================================================
+Asynchronous FIFO with Gray-code CDC pointers, parameterized depth, 32-bit data width.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- wclk  input  — write clock
-- wrst_n  input  — input
-- winc  input  — input
-- wdata [31:0]  input  — input
-- rclk  input  — read clock
-- rrst_n  input  — input
-- rinc  input  — input
-- rdata [31:0]  output  — output
-- wfull  output  — output
-- rempty  output  — output
+Verification status: PASS
 
-Behavior:
-- Gray-code pointer CDC; depth parameterized.
-- Used between core clock and Ethernet/DRAM clocks.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Asynchronous FIFO with Gray-code CDC pointers, parameterized depth, 32-bit data width.
+FR-002: Writes accepted when wr_en && !full; reads when rd_en && !empty.
+FR-003: count shall reflect current occupancy.
+FR-004: empty asserted when FIFO contains zero entries; full at depth limit.
+FR-005: Gray-code pointer CDC FIFO. wfull asserted when write domain is full. rempty asserted when read domain is empty. Depth parameterized (defaul
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| wclk | input | 1 | — | Input signal, width 1. |
+| wrst_n | input | 1 | active-low | Input signal, width 1. |
+| winc | input | 1 | — | Input signal, width 1. |
+| wdata | input | [31:0] | — | AXI write data. |
+| rclk | input | 1 | — | Input signal, width 1. |
+| rrst_n | input | 1 | active-low | Input signal, width 1. |
+| rinc | input | 1 | — | Input signal, width 1. |
+| rdata | output | [31:0] | — | AXI read data. |
+| wfull | output | 1 | — | Output port (1); see functional behavior. |
+| rempty | output | 1 | — | Output port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- wclk (input, 1, —): Input signal, width 1.
+- wrst_n (input, 1, active-low): Input signal, width 1.
+- winc (input, 1, —): Input signal, width 1.
+- wdata (input, [31:0], —): AXI write data.
+- rclk (input, 1, —): Input signal, width 1.
+- rrst_n (input, 1, active-low): Input signal, width 1.
+- rinc (input, 1, —): Input signal, width 1.
+- rdata (output, [31:0], —): AXI read data.
+- wfull (output, 1, —): Output port (1); see functional behavior.
+- rempty (output, 1, —): Output port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock/reset: refer to port list and RTL always blocks.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Gray-code pointer CDC FIFO. wfull asserted when write domain is full. rempty asserted when read domain is empty. Depth parameterized (default 16), data width 32 bits.
+
+RTL header notes:
+- Asynchronous FIFO with Gray-code pointer CDC
+- Based on Cummings SNUG-2002 design; registered full/empty flags break
+- the combinational loop that would exist with wire flags.
+- Verilog-2005 synthesizable
+- Memory array
+- ----------------------------------------------------------------
+- Write domain
+- ----------------------------------------------------------------
+
+FIFO operation: Push on wr_en when not full; pop on rd_en when not empty. Monitor count/empty/full in scoreboard.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/async_fifo_tb.v
+
+6.2 Test Scenarios
+  TS-01: Two clock domains
+  TS-02: Write one word (keeps winc high for one wclk period)
+  TS-03: Read one word: rinc goes high for one rclk cycle.
+  TS-04: rdata is async (mem[rptr_bin]) — capture BEFORE rinc increments rptr.
+  TS-05: rdata shows mem[rptr_bin] right now (async).
+  TS-06: Capture it, then assert rinc.
+  TS-07: Sync reset: hold low for >= 2 clock edges on each domain
+  TS-08: Allow sync stages to propagate
+  TS-09: ------------------------------------------------
+  TS-10: Test 1: FIFO should be empty after reset
+  TS-11: ------------------------------------------------
+  TS-12: ------------------------------------------------
+
+6.3 Expected Results / Scoreboard
+  - captured must equal exp
+  - check(expected[i], i)
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: read_and_check, write_word
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Purely combinational logic (continuous assignments).

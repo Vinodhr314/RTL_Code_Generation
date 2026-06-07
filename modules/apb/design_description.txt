@@ -1,16 +1,117 @@
 Module: apb
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA APB3
 
-Target: 32-bit RISC-V SoC — bus
-
-APB interface definition / reusable APB bundle for peripherals.
+================================================================================
+1. OVERVIEW
+================================================================================
+APB3 slave register interface for RV32 peripherals.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- pclk,  presetn,  — paddr, psel, penable, pwrite, pwdata, prdata, pready
+Verification status: PASS
 
-Behavior:
-- APB3/4 signal bundle for UART, GPIO, timers.
-- Single-cycle data phase after setup.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement APB3 slave register interface for RV32 peripherals.
+FR-002: Slave shall comply with APB3 SETUP/ACCESS two-phase protocol.
+FR-003: pready shall assert on ACCESS phase (psel && penable).
+FR-004: pslverr shall remain deasserted for valid register accesses.
+FR-005: Four 32-bit registers at offsets 0x0, 0x4, 0x8, 0x0C.
+FR-006: APB3 slave with 4 x 32-bit registers. SETUP then ACCESS phase; pready=1 on access.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| pclk | input | 1 | — | APB bus clock; sampled on rising edge. |
+| presetn | input | 1 | active-low | APB active-low reset; clears registers and deasserts pready. |
+| paddr | input | [11:0] | — | APB byte address of the transfer. |
+| psel | input | 1 | active-high | APB peripheral select; high during SETUP and ACCESS phases. |
+| penable | input | 1 | active-high | APB enable; low in SETUP, high in ACCESS phase. |
+| pwrite | input | 1 | active-high | APB transfer direction: 1=write, 0=read. |
+| pwdata | input | [31:0] | — | APB write data bus (32-bit). |
+| prdata | output | [31:0] | — | APB read data bus (32-bit). |
+| pready | output | 1 | — | APB slave ready; 1 completes data phase. |
+| pslverr | output | 1 | — | APB slave error; 1 indicates failed transfer. |
+
+3.2 Signal Descriptions
+- pclk (input, 1, —): APB bus clock; sampled on rising edge.
+- presetn (input, 1, active-low): APB active-low reset; clears registers and deasserts pready.
+- paddr (input, [11:0], —): APB byte address of the transfer.
+- psel (input, 1, active-high): APB peripheral select; high during SETUP and ACCESS phases.
+- penable (input, 1, active-high): APB enable; low in SETUP, high in ACCESS phase.
+- pwrite (input, 1, active-high): APB transfer direction: 1=write, 0=read.
+- pwdata (input, [31:0], —): APB write data bus (32-bit).
+- prdata (output, [31:0], —): APB read data bus (32-bit).
+- pready (output, 1, —): APB slave ready; 1 completes data phase.
+- pslverr (output, 1, —): APB slave error; 1 indicates failed transfer.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single pclk (APB).
+Reset: presetn active-low asynchronous assert, synchronous deassert.
+APB timing: SETUP cycle (psel=1, penable=0) then ACCESS cycle (psel=1, penable=1).
+DV note: Sample prdata/pready on posedge pclk during ACCESS phase.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+APB3 slave with 4 x 32-bit registers. SETUP then ACCESS phase; pready=1 on access.
+
+RTL header notes:
+- APB3 slave — four 32-bit memory-mapped registers
+
+Register map (APB byte addresses):
+- 0x000 — REG0 (regs[0])
+- 0x004 — REG1 (regs[1])
+- 0x008 — REG2 (regs[2])
+- 0x00C — REG3 (regs[3])
+
+APB protocol: Address latched when psel=1 and penable=0. Read/write completes when psel=1, penable=1, pready=1.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/apb_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `apb_read` per TB initial block.
+  TS-02: Exercise task `apb_write` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'hDEADBEEF
+  - rd must equal 32'hCAFEBABE
+  - pslverr must equal 0
+  - APB write addr=12'h0 data=32'hDEADBEEF
+  - APB write addr=12'h4 data=32'hCAFEBABE
+  - APB read addr=12'h0 — compare prdata to prior write
+  - APB read addr=12'h4 — compare prdata to prior write
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: apb_read, apb_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Unmapped addresses may read undefined data; pslverr tied low in RTL.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).

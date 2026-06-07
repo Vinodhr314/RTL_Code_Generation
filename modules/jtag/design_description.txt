@@ -1,21 +1,92 @@
 Module: jtag
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: IEEE 1149.1 JTAG
 
-Target: 32-bit RISC-V SoC — debug
-
-JTAG TAP controller for RV32 debug (DTM) and boundary scan.
+================================================================================
+1. OVERVIEW
+================================================================================
+JTAG TAP controller stub..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- tck  input  — input
-- tms  input  — input
-- tdi  input  — input
-- tdo  output  — output
-- trst_n  input  — optional
-- debug_req  output  — to debug module
+Verification status: PASS; Combinational tdo=dr[0]; LSB-first shift
 
-Behavior:
-- IEEE 1149.1 TAP; shifts DR/IR for RISC-V Debug Spec access.
-- Connects to Debug Module and optional BSCAN.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement JTAG TAP controller stub..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Shift TDI to TDO; assert debug_req when IR=0x11..
+FR-005: Shift TDI to TDO; assert debug_req when IR=0x11.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| tck | input | 1 | — | Input signal, width 1. |
+| tms | input | 1 | — | Input signal, width 1. |
+| tdi | input | 1 | — | Input signal, width 1. |
+| tdo | output | 1 | — | Output signal, width 1. |
+| trst_n | input | 1 | active-low | Input signal, width 1. |
+| debug_req | output | 1 | — | Output port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- tck (input, 1, —): Input signal, width 1.
+- tms (input, 1, —): Input signal, width 1.
+- tdi (input, 1, —): Input signal, width 1.
+- tdo (output, 1, —): Output signal, width 1.
+- trst_n (input, 1, active-low): Input signal, width 1.
+- debug_req (output, 1, —): Output port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Shift TDI to TDO; assert debug_req when IR=0x11.
+
+RTL header notes:
+- jtag — TAP controller stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/jtag_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - tdo must equal 1'b1
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: Combinational tdo=dr[0]; LSB-first shift
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Purely combinational logic (continuous assignments).

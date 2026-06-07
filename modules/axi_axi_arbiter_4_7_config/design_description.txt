@@ -1,20 +1,248 @@
 Module: axi_axi_arbiter_4_7_config
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — bus
-
-Configurable AXI4 crossbar arbiter (4 masters, 7 slaves).
+================================================================================
+1. OVERVIEW
+================================================================================
+Simplified 4-master 7-slave AXI4-Lite crossbar arbiter with address decode and round-robin arbitration.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- aclk  input  — input
-- aresetn  input  — input
-- 4  AXI  — master inputs
-- 7  AXI  — slave outputs
-- cfg [31:0]  input  — arbitration mode
+Verification status: PASS
 
-Behavior:
-- Round-robin or QoS arbitration; address decode to 7 slave regions.
-- Central SoC interconnect for RV32 platform.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Simplified 4-master 7-slave AXI4-Lite crossbar arbiter with address decode and round-robin arbitration.
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: Round-robin arbitration selects one master per cycle. Address decode maps araddr/awaddr upper bits to slave 0-6. s_grant indicates winning m
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| aclk | input | 1 | — | AXI bus clock; sampled on rising edge. |
+| aresetn | input | 1 | — | AXI active-low reset; clears interface state. |
+| cfg | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| m0_awvalid | input | 1 | — | Input signal, width 1. |
+| m0_awready | output | 1 | — | Output signal, width 1. |
+| m0_awaddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m0_wvalid | input | 1 | — | Input signal, width 1. |
+| m0_wready | output | 1 | — | Output signal, width 1. |
+| m0_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| m0_wstrb | input | [3:0] | — | Input signal, width [3:0]. |
+| m0_bvalid | output | 1 | — | Output signal, width 1. |
+| m0_bready | input | 1 | — | Input signal, width 1. |
+| m0_bresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m0_arvalid | input | 1 | — | Input signal, width 1. |
+| m0_arready | output | 1 | — | Output signal, width 1. |
+| m0_araddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m0_rvalid | output | 1 | — | Output signal, width 1. |
+| m0_rready | input | 1 | — | Input signal, width 1. |
+| m0_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| m0_rresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m1_awvalid | input | 1 | — | Input signal, width 1. |
+| m1_awready | output | 1 | — | Output signal, width 1. |
+| m1_awaddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m1_wvalid | input | 1 | — | Input signal, width 1. |
+| m1_wready | output | 1 | — | Output signal, width 1. |
+| m1_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| m1_wstrb | input | [3:0] | — | Input signal, width [3:0]. |
+| m1_bvalid | output | 1 | — | Output signal, width 1. |
+| m1_bready | input | 1 | — | Input signal, width 1. |
+| m1_bresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m1_arvalid | input | 1 | — | Input signal, width 1. |
+| m1_arready | output | 1 | — | Output signal, width 1. |
+| m1_araddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m1_rvalid | output | 1 | — | Output signal, width 1. |
+| m1_rready | input | 1 | — | Input signal, width 1. |
+| m1_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| m1_rresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m2_awvalid | input | 1 | — | Input signal, width 1. |
+| m2_awready | output | 1 | — | Output signal, width 1. |
+| m2_awaddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m2_wvalid | input | 1 | — | Input signal, width 1. |
+| m2_wready | output | 1 | — | Output signal, width 1. |
+| m2_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| m2_wstrb | input | [3:0] | — | Input signal, width [3:0]. |
+| m2_bvalid | output | 1 | — | Output signal, width 1. |
+| m2_bready | input | 1 | — | Input signal, width 1. |
+| m2_bresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m2_arvalid | input | 1 | — | Input signal, width 1. |
+| m2_arready | output | 1 | — | Output signal, width 1. |
+| m2_araddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m2_rvalid | output | 1 | — | Output signal, width 1. |
+| m2_rready | input | 1 | — | Input signal, width 1. |
+| m2_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| m2_rresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m3_awvalid | input | 1 | — | Input signal, width 1. |
+| m3_awready | output | 1 | — | Output signal, width 1. |
+| m3_awaddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m3_wvalid | input | 1 | — | Input signal, width 1. |
+| m3_wready | output | 1 | — | Output signal, width 1. |
+| m3_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| m3_wstrb | input | [3:0] | — | Input signal, width [3:0]. |
+| m3_bvalid | output | 1 | — | Output signal, width 1. |
+| m3_bready | input | 1 | — | Input signal, width 1. |
+| m3_bresp | output | [1:0] | — | Output signal, width [1:0]. |
+| m3_arvalid | input | 1 | — | Input signal, width 1. |
+| m3_arready | output | 1 | — | Output signal, width 1. |
+| m3_araddr | input | [31:0] | — | Input signal, width [31:0]. |
+| m3_rvalid | output | 1 | — | Output signal, width 1. |
+| m3_rready | input | 1 | — | Input signal, width 1. |
+| m3_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| m3_rresp | output | [1:0] | — | Output signal, width [1:0]. |
+| s_grant | output | [2:0] | — | Output port ([2:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- aclk (input, 1, —): AXI bus clock; sampled on rising edge.
+- aresetn (input, 1, —): AXI active-low reset; clears interface state.
+- cfg (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- m0_awvalid (input, 1, —): Input signal, width 1.
+- m0_awready (output, 1, —): Output signal, width 1.
+- m0_awaddr (input, [31:0], —): Input signal, width [31:0].
+- m0_wvalid (input, 1, —): Input signal, width 1.
+- m0_wready (output, 1, —): Output signal, width 1.
+- m0_wdata (input, [31:0], —): Input signal, width [31:0].
+- m0_wstrb (input, [3:0], —): Input signal, width [3:0].
+- m0_bvalid (output, 1, —): Output signal, width 1.
+- m0_bready (input, 1, —): Input signal, width 1.
+- m0_bresp (output, [1:0], —): Output signal, width [1:0].
+- m0_arvalid (input, 1, —): Input signal, width 1.
+- m0_arready (output, 1, —): Output signal, width 1.
+- m0_araddr (input, [31:0], —): Input signal, width [31:0].
+- m0_rvalid (output, 1, —): Output signal, width 1.
+- m0_rready (input, 1, —): Input signal, width 1.
+- m0_rdata (output, [31:0], —): Output signal, width [31:0].
+- m0_rresp (output, [1:0], —): Output signal, width [1:0].
+- m1_awvalid (input, 1, —): Input signal, width 1.
+- m1_awready (output, 1, —): Output signal, width 1.
+- m1_awaddr (input, [31:0], —): Input signal, width [31:0].
+- m1_wvalid (input, 1, —): Input signal, width 1.
+- m1_wready (output, 1, —): Output signal, width 1.
+- m1_wdata (input, [31:0], —): Input signal, width [31:0].
+- m1_wstrb (input, [3:0], —): Input signal, width [3:0].
+- m1_bvalid (output, 1, —): Output signal, width 1.
+- m1_bready (input, 1, —): Input signal, width 1.
+- m1_bresp (output, [1:0], —): Output signal, width [1:0].
+- m1_arvalid (input, 1, —): Input signal, width 1.
+- m1_arready (output, 1, —): Output signal, width 1.
+- m1_araddr (input, [31:0], —): Input signal, width [31:0].
+- m1_rvalid (output, 1, —): Output signal, width 1.
+- m1_rready (input, 1, —): Input signal, width 1.
+- m1_rdata (output, [31:0], —): Output signal, width [31:0].
+- m1_rresp (output, [1:0], —): Output signal, width [1:0].
+- m2_awvalid (input, 1, —): Input signal, width 1.
+- m2_awready (output, 1, —): Output signal, width 1.
+- m2_awaddr (input, [31:0], —): Input signal, width [31:0].
+- m2_wvalid (input, 1, —): Input signal, width 1.
+- m2_wready (output, 1, —): Output signal, width 1.
+- m2_wdata (input, [31:0], —): Input signal, width [31:0].
+- m2_wstrb (input, [3:0], —): Input signal, width [3:0].
+- m2_bvalid (output, 1, —): Output signal, width 1.
+- m2_bready (input, 1, —): Input signal, width 1.
+- m2_bresp (output, [1:0], —): Output signal, width [1:0].
+- m2_arvalid (input, 1, —): Input signal, width 1.
+- m2_arready (output, 1, —): Output signal, width 1.
+- m2_araddr (input, [31:0], —): Input signal, width [31:0].
+- m2_rvalid (output, 1, —): Output signal, width 1.
+- m2_rready (input, 1, —): Input signal, width 1.
+- m2_rdata (output, [31:0], —): Output signal, width [31:0].
+- m2_rresp (output, [1:0], —): Output signal, width [1:0].
+- m3_awvalid (input, 1, —): Input signal, width 1.
+- m3_awready (output, 1, —): Output signal, width 1.
+- m3_awaddr (input, [31:0], —): Input signal, width [31:0].
+- m3_wvalid (input, 1, —): Input signal, width 1.
+- m3_wready (output, 1, —): Output signal, width 1.
+- m3_wdata (input, [31:0], —): Input signal, width [31:0].
+- m3_wstrb (input, [3:0], —): Input signal, width [3:0].
+- m3_bvalid (output, 1, —): Output signal, width 1.
+- m3_bready (input, 1, —): Input signal, width 1.
+- m3_bresp (output, [1:0], —): Output signal, width [1:0].
+- m3_arvalid (input, 1, —): Input signal, width 1.
+- m3_arready (output, 1, —): Output signal, width 1.
+- m3_araddr (input, [31:0], —): Input signal, width [31:0].
+- m3_rvalid (output, 1, —): Output signal, width 1.
+- m3_rready (input, 1, —): Input signal, width 1.
+- m3_rdata (output, [31:0], —): Output signal, width [31:0].
+- m3_rresp (output, [1:0], —): Output signal, width [1:0].
+- s_grant (output, [2:0], —): Output port ([2:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single aclk (AXI).
+Reset: aresetn active-low.
+AXI handshakes: valid/ready per channel; respect TB task sequencing.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Round-robin arbitration selects one master per cycle. Address decode maps araddr/awaddr upper bits to slave 0-6. s_grant indicates winning master index. cfg[0] selects round-robin(0) vs priority(1).
+
+RTL header notes:
+- AXI crossbar arbiter skeleton: 4 masters, 7 slaves
+- Round-robin or priority arbitration; address-decode to slave regions
+- Verilog-2005 synthesizable
+- Master 0
+- Master 1
+- Master 2
+- Master 3
+- Arbitration output
+
+FSM states (from RTL localparams):
+- FSM_IDLE
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/axi_axi_arbiter_4_7_config_tb.v
+
+6.2 Test Scenarios
+  TS-01: Arbiter AXI write: assert valid, wait for awready (DUT asserts after grant),
+  TS-02: then wait for wready (DUT asserts in FSM_WDATA), then wait for bvalid.
+  TS-03: Keep valid asserted until the corresponding ready is seen (AXI spec).
+  TS-04: Wait for bvalid BEFORE asserting bready (avoids NBA suppression).
+  TS-05: Test 1: M0 write to slave 0 region (addr[31:29]=000)
+  TS-06: Test 2: M0 read from slave 2 region (addr[31:29]=010 = 0x4000_0000)
+  TS-07: Test 3: M1 write to slave 3 region (addr[31:29]=011 = 0x6000_0000)
+  TS-08: Test 4: M2 read from slave 5 region (addr[31:29]=101 = 0xA000_0000)
+  TS-09: Test 5: Priority mode (cfg[0]=1) M0 write
+
+6.3 Expected Results / Scoreboard
+  - rd[2:0] must equal 3'd2
+  - rd[2:0] must equal 3'd5
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: m0_read, m0_write, m1_write, m2_read
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - FSM_IDLE = 3'd0
+  - FSM_GRANT = 3'd1
+  - FSM_WDATA = 3'd2
+  - FSM_BRESP = 3'd3
+  - FSM_RRESP = 3'd4
+- FSM encoded with 1 states.

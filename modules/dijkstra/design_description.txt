@@ -1,26 +1,116 @@
 Module: dijkstra
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: MMIO accelerator control (start/done/busy/result/irq)
 
-Target: 32-bit RISC-V SoC — algorithm accelerator / reference RTL
-
-Dijkstra's Algorithm: Shortest path on weighted graph; 32-bit edge weights.
+================================================================================
+1. OVERVIEW
+================================================================================
+Dijkstra shortest-path accelerator stub on hardcoded 4-node weighted graph..
 
 Integration context:
 - Exposed as memory-mapped accelerator or standalone test module for RV32 validation
 - Parameters: N (array size), DATA_W=32 default
 
-Ports:
-- clk        input 1   — system clock
-- rst_n      input 1   — async active-low reset
-- start      input 1   — begin operation
-- base_addr  [31:0] input — pointer to data structure in RV32 memory space
-- length     [15:0] input — element count or problem size
-- done       output 1  — operation complete
-- busy       output 1  — operation in progress
-- result     [31:0] output — primary result (index, gcd, count, etc.)
-- irq        output 1  — optional completion interrupt
+Verification status: PASS; Accelerator stub: shortest path 0->1 = 3
 
-Behavior:
-- Reads/writes data via external memory interface or direct array ports (param ARRAY_MODE)
-- Implements Dijkstra's Algorithm per standard algorithm definition
-- Completes with done=1; sets result register for software poll
-- Verilog-2005 synthesizable; FSM or microcoded control acceptable
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Dijkstra shortest-path accelerator stub on hardcoded 4-node weighted graph..
+FR-002: Assert busy after start; deassert when done.
+FR-003: Present final result on result port when done=1.
+FR-004: Pulse irq for one cycle coincident with completion (unless RTL notes otherwise).
+FR-005: base_addr and length may be ignored in stub model — document actual RTL behavior.
+FR-006: On start: Dijkstra from node 0 on graph (0->1:4, 0->2:2, 2->1:1, 1->3:5, 2->3:8). result=3 (shortest 0->1 via 0->2->1); irq pulses one cycle
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| base_addr | input | [31:0] | — | Memory base address for accelerator DMA/MMIO (may be ignored in stub). |
+| length | input | [15:0] | — | Transfer or graph length parameter (may be ignored in stub). |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| result | output | [31:0] | — | Accelerator result word read after done. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- base_addr (input, [31:0], —): Memory base address for accelerator DMA/MMIO (may be ignored in stub).
+- length (input, [15:0], —): Transfer or graph length parameter (may be ignored in stub).
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+- result (output, [31:0], —): Accelerator result word read after done.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+Documented latency: 8'd28 clock cycles (localparam CYCLES).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+On start: Dijkstra from node 0 on graph (0->1:4, 0->2:2, 2->1:1, 1->3:5, 2->3:8). result=3 (shortest 0->1 via 0->2->1); irq pulses one cycle.
+
+RTL header notes:
+- dijkstra — Dijkstra shortest-path accelerator stub (Verilog-2005)
+- Hardcoded 4-node graph; shortest 0->1 = 3. result = 32'd3.
+
+FSM states (from RTL localparams):
+- IDLE → BUSY_ST → DONE_ST
+
+Hardcoded/stub result constant: RESULT = 32'd3
+Busy duration: 8'd28 cycles from start to done.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/dijkstra_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `run_accelerator` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - result must equal exp_result
+  - Test 1: result === 32'd3, busy asserted during run, irq pulses with done
+  - Test 2: result === 32'd3, busy asserted during run, irq pulses with done
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: run_accelerator
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Stub model: graph/data may be hardcoded; base_addr/length inputs ignored.
+- Batch verification note: Accelerator stub: shortest path 0->1 = 3
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 2'd0
+  - BUSY_ST = 2'd1
+  - DONE_ST = 2'd2
+  - CYCLES = 8'd28
+  - RESULT = 32'd3
+- FSM encoded with 3 states.

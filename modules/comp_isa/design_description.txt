@@ -1,23 +1,97 @@
 Module: comp_isa
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — accelerator
-
-Custom compressed-ISA decode assist or coprocessor for custom RV32 extensions.
+================================================================================
+1. OVERVIEW
+================================================================================
+Custom compressed-ISA decode assist for fused add (opcode 7'h7B)..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- inst [31:0]  input  — custom instruction
-- valid  input  — input
-- rs1 [31:0]  input  — input
-- rs2 [31:0]  input  — input
-- rd [31:0]  output  — output
-- rd_valid  output  — output
+Verification status: PASS
 
-Behavior:
-- Decodes vendor custom opcode space; returns result to RV32 writeback.
-- Supports fused ops defined in platform spec.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Custom compressed-ISA decode assist for fused add (opcode 7'h7B)..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: When valid and inst[6:0]==7'h7B: rd = rs1 + rs2, rd_valid=1 next cycle. Otherwise rd=0, rd_valid=0..
+FR-005: When valid and inst[6:0]==7'h7B: rd = rs1 + rs2, rd_valid=1 next cycle. Otherwise rd=0, rd_valid=0.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| inst | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| rs1 | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| rs2 | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| rd | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+| rd_valid | output | 1 | — | Output port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- inst (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- rs1 (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- rs2 (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- rd (output, [31:0], —): Output port ([31:0]); see functional behavior.
+- rd_valid (output, 1, —): Output port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+When valid and inst[6:0]==7'h7B: rd = rs1 + rs2, rd_valid=1 next cycle. Otherwise rd=0, rd_valid=0.
+
+RTL header notes:
+- comp_isa — Custom ISA fused-add coprocessor (Verilog-2005)
+- Opcode 7'h7B: rd = rs1 + rs2
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/comp_isa_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'd42
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - CUSTOM_OP = 7'h7B

@@ -1,19 +1,136 @@
 Module: hpdmc_latest
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — memory
-
-High-performance DRAM controller (latest rev) with optimized refresh.
+================================================================================
+1. OVERVIEW
+================================================================================
+High-performance DRAM controller AXI4 slave..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- aclk  input  — input
-- aresetn  input  — input
-- AXI  slave  — slave
-- dram  PHY  — pins
+Verification status: PASS; AXI4 slave cloned from dram pattern
 
-Behavior:
-- Successor to baseline DRAM ctrl; lower latency for RV32 L1 miss.
-- Supports auto-precharge and bank interleaving.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement High-performance DRAM controller AXI4 slave..
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: AXI4 slave with 256-word memory and SDRAM command pins.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| aclk | input | 1 | — | AXI bus clock; sampled on rising edge. |
+| aresetn | input | 1 | — | AXI active-low reset; clears interface state. |
+| awvalid | input | 1 | active-high | AXI write address channel valid. |
+| awready | output | 1 | — | AXI write address channel ready. |
+| awaddr | input | [31:0] | — | AXI write address. |
+| awprot | input | [2:0] | — | Input signal, width [2:0]. |
+| wvalid | input | 1 | active-high | AXI write data channel valid. |
+| wready | output | 1 | — | AXI write data channel ready. |
+| wdata | input | [31:0] | — | AXI write data. |
+| wstrb | input | [3:0] | — | AXI write byte strobes. |
+| bvalid | output | 1 | — | AXI write response channel valid. |
+| bready | input | 1 | — | AXI write response channel ready. |
+| bresp | output | [1:0] | — | AXI write response code (OKAY=2'b00). |
+| arvalid | input | 1 | active-high | AXI read address channel valid. |
+| arready | output | 1 | — | AXI read address channel ready. |
+| araddr | input | [31:0] | — | AXI read address. |
+| arprot | input | [2:0] | — | Input signal, width [2:0]. |
+| rvalid | output | 1 | — | AXI read data channel valid. |
+| rready | input | 1 | — | AXI read data channel ready. |
+| rdata | output | [31:0] | — | AXI read data. |
+| rresp | output | [1:0] | — | AXI read response code. |
+| sdram_cmd | output | [2:0] | — | Output signal, width [2:0]. |
+| sdram_addr | output | [12:0] | — | Output signal, width [12:0]. |
+
+3.2 Signal Descriptions
+- aclk (input, 1, —): AXI bus clock; sampled on rising edge.
+- aresetn (input, 1, —): AXI active-low reset; clears interface state.
+- awvalid (input, 1, active-high): AXI write address channel valid.
+- awready (output, 1, —): AXI write address channel ready.
+- awaddr (input, [31:0], —): AXI write address.
+- awprot (input, [2:0], —): Input signal, width [2:0].
+- wvalid (input, 1, active-high): AXI write data channel valid.
+- wready (output, 1, —): AXI write data channel ready.
+- wdata (input, [31:0], —): AXI write data.
+- wstrb (input, [3:0], —): AXI write byte strobes.
+- bvalid (output, 1, —): AXI write response channel valid.
+- bready (input, 1, —): AXI write response channel ready.
+- bresp (output, [1:0], —): AXI write response code (OKAY=2'b00).
+- arvalid (input, 1, active-high): AXI read address channel valid.
+- arready (output, 1, —): AXI read address channel ready.
+- araddr (input, [31:0], —): AXI read address.
+- arprot (input, [2:0], —): Input signal, width [2:0].
+- rvalid (output, 1, —): AXI read data channel valid.
+- rready (input, 1, —): AXI read data channel ready.
+- rdata (output, [31:0], —): AXI read data.
+- rresp (output, [1:0], —): AXI read response code.
+- sdram_cmd (output, [2:0], —): Output signal, width [2:0].
+- sdram_addr (output, [12:0], —): Output signal, width [12:0].
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single aclk (AXI).
+Reset: aresetn active-low.
+AXI handshakes: valid/ready per channel; respect TB task sequencing.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+AXI4 slave with 256-word memory and SDRAM command pins.
+
+RTL header notes:
+- dram — Generic DRAM controller AXI4 slave stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- WR_IDLE → WR_RESP → RD_IDLE → RD_DATA
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/hpdmc_latest_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `axi_read` per TB initial block.
+  TS-02: Exercise task `axi_write` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'h1234_5678
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: axi_read, axi_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: AXI4 slave cloned from dram pattern
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).
+- Localparams:
+  - WR_IDLE = 2'd0
+  - WR_RESP = 2'd1
+  - RD_IDLE = 2'd0
+  - RD_DATA = 2'd1
+- FSM encoded with 4 states.

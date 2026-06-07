@@ -1,26 +1,100 @@
 Module: spi
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SPI (Motorola)
 
-Target: 32-bit RISC-V SoC — peripheral
-
-SPI master controller for flash and sensor attachment.
+================================================================================
+1. OVERVIEW
+================================================================================
+spi.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- sck  output  — output
-- mosi  output  — output
-- miso  input  — input
-- cs_n [3:0]  output  — chip selects
-- tx [7:0]  input  — input
-- rx [7:0]  output  — output
-- busy  output  — output
-- done  output  — output
-- irq  output  — output
+Verification status: PASS; 8-bit shift; TB while(!done)
 
-Behavior:
-- Mode 0 default; programmable clock divider.
-- APB memory map; supports flash XIP optional.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement spi.
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: SPI master controller
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| sck | output | 1 | — | Output signal, width 1. |
+| mosi | output | 1 | — | Output signal, width 1. |
+| miso | input | 1 | — | Input signal, width 1. |
+| cs_n | output | [3:0] | active-low | Output signal, width [3:0]. |
+| tx | input | [7:0] | — | Serial transmit line (UART/SPI). |
+| rx | output | [7:0] | — | Serial receive line (UART/SPI). |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- sck (output, 1, —): Output signal, width 1.
+- mosi (output, 1, —): Output signal, width 1.
+- miso (input, 1, —): Input signal, width 1.
+- cs_n (output, [3:0], active-low): Output signal, width [3:0].
+- tx (input, [7:0], —): Serial transmit line (UART/SPI).
+- rx (output, [7:0], —): Serial receive line (UART/SPI).
+- busy (output, 1, —): Status flag: operation in progress.
+- done (output, 1, —): Status flag: operation completed successfully.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+SPI master controller
+
+RTL header notes:
+- spi — SPI master stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/spi_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rx must equal 8'hFF
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: 8-bit shift; TB while(!done)
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

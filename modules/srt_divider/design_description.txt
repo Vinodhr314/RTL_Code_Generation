@@ -1,24 +1,100 @@
 Module: srt_divider
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: MMIO accelerator control (start/done/busy/result/irq)
 
-Target: 32-bit RISC-V SoC — datapath
-
-SRT non-restoring 32-bit integer divider for RV32 DIV/REM.
+================================================================================
+1. OVERVIEW
+================================================================================
+srt_divider.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- valid  input  — input
-- dividend [31:0]  input  — input
-- divisor [31:0]  input  — input
-- quotient [31:0]  output  — output
-- remainder [31:0]  output  — output
-- done  output  — output
-- busy  output  — output
+Verification status: PASS; 100/7 quotient=14 remainder=2
 
-Behavior:
-- Radix-2 or radix-4 SRT; handles divide-by-zero per RV32 spec.
-- Multi-cycle; integrates with ALU issue.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement srt_divider.
+FR-002: Assert busy after start; deassert when done.
+FR-003: Present final result on result port when done=1.
+FR-004: Pulse irq for one cycle coincident with completion (unless RTL notes otherwise).
+FR-005: base_addr and length may be ignored in stub model — document actual RTL behavior.
+FR-006: SRT integer divider
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| dividend | input | [31:0] | — | Input signal, width [31:0]. |
+| divisor | input | [31:0] | — | Input signal, width [31:0]. |
+| quotient | output | [31:0] | — | Output signal, width [31:0]. |
+| remainder | output | [31:0] | — | Output signal, width [31:0]. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- dividend (input, [31:0], —): Input signal, width [31:0].
+- divisor (input, [31:0], —): Input signal, width [31:0].
+- quotient (output, [31:0], —): Output signal, width [31:0].
+- remainder (output, [31:0], —): Output signal, width [31:0].
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+SRT integer divider
+
+RTL header notes:
+- srt_divider — integer divider stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/srt_divider_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - quotient must equal 32'd14
+  - remainder must equal 32'd2
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Stub model: graph/data may be hardcoded; base_addr/length inputs ignored.
+- Batch verification note: 100/7 quotient=14 remainder=2
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

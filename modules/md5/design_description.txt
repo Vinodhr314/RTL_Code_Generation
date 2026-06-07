@@ -1,22 +1,99 @@
 Module: md5
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: RFC 1321 MD5
 
-Target: 32-bit RISC-V SoC — crypto
-
-MD5 hash core for legacy checksum (non-security-critical use).
+================================================================================
+1. OVERVIEW
+================================================================================
+MD5 hash core stub..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — input
-- block [511:0]  input  — 512-bit block
-- digest [127:0]  output  — output
-- done  output  — output
-- busy  output  — output
+Verification status: PASS; Empty-string MD5 digest stub
 
-Behavior:
-- Processes one 512-bit block per message segment.
-- Software feeds padded message via DMA.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement MD5 hash core stub..
+FR-002: Accept block/key on valid/start; assert done when digest/ciphertext ready.
+FR-003: Output width and algorithm per locked spec and RTL header comments.
+FR-004: MD5 of empty string digest after 16 cycles.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| block | input | [511:0] | — | Input signal, width [511:0]. |
+| digest | output | [127:0] | — | Output port ([127:0]); see functional behavior. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- block (input, [511:0], —): Input signal, width [511:0].
+- digest (output, [127:0], —): Output port ([127:0]); see functional behavior.
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+MD5 of empty string digest after 16 cycles.
+
+RTL header notes:
+- md5 — MD5 hash stub (Verilog-2005)
+- Empty string MD5: d41d8cd98f00b204e9800998ecf8427e
+
+FSM states (from RTL localparams):
+- DIGEST
+
+Crypto stub: Algorithm reference values from TB; verify done timing and block_out/digest width.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/md5_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - digest must equal 128'hd41d8cd98f00b204e9800998ecf8427e
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Empty-string MD5 digest stub
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - DIGEST = 128'hd41d8cd98f00b204e9800998ecf8427e

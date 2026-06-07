@@ -1,24 +1,127 @@
 Module: atomic
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — core
-
-RV32 A-extension atomic memory operation helper (LR/SC, AMO).
+================================================================================
+1. OVERVIEW
+================================================================================
+RV32 A-extension atomic memory operation helper: LR/SC reservation and AMO ops.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- amo_op [2:0]  input  — input
-- addr [31:0]  input  — input
-- wdata [31:0]  input  — input
-- valid  input  — input
-- rdata [31:0]  output  — output
-- success  output  — SC success
-- done  output  — output
+Verification status: PASS
 
-Behavior:
-- Implements AMO swap/add/and/or/xor and LR/SC reservation logic.
-- Interfaces with L1 or bus snoop for exclusives.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement RV32 A-extension atomic memory operation helper: LR/SC reservation and AMO ops.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: LR loads from internal register file and sets reservation. SC stores if reservation matches addr. AMO ops apply operatio.
+FR-005: LR loads from internal register file and sets reservation. SC stores if reservation matches addr. AMO ops apply operation to reservation reg
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| amo_op | input | [2:0] | — | Input signal, width [2:0]. |
+| addr | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| wdata | input | [31:0] | — | AXI write data. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| rdata | output | [31:0] | — | AXI read data. |
+| success | output | 1 | — | Output port (1); see functional behavior. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- amo_op (input, [2:0], —): Input signal, width [2:0].
+- addr (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- wdata (input, [31:0], —): AXI write data.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- rdata (output, [31:0], —): AXI read data.
+- success (output, 1, —): Output port (1); see functional behavior.
+- done (output, 1, —): Status flag: operation completed successfully.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+LR loads from internal register file and sets reservation. SC stores if reservation matches addr. AMO ops apply operation to reservation register. done pulses high for one cycle when op completes. success indicates SC success.
+
+RTL header notes:
+- RV32 A-extension atomic memory operation helper
+- Supports LR/SC and AMO swap/add/and/or/xor
+- Verilog-2005 synthesizable
+- AMO operation encoding
+- Internal reservation register (one-element "register file")
+- Load reservation: return current resv_data for this addr
+- AMO: read-modify-write on reservation register
+
+FSM states (from RTL localparams):
+- OP_LR → OP_SC → OP_SWAP → OP_ADD → OP_AND → OP_OR → OP_XOR
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/atomic_tb.v
+
+6.2 Test Scenarios
+  TS-01: Issue one AMO operation and wait for done
+  TS-02: Wait for done
+  TS-03: Hold reset for 2+ clock edges (sync reset lesson)
+  TS-04: ------------------------------------------------
+  TS-05: Test 1: LR — load reservation at addr 0x100
+  TS-06: ------------------------------------------------
+  TS-07: done should be 1 on cycle after valid
+  TS-08: ------------------------------------------------
+  TS-09: Test 2: SC — store-conditional should succeed (addr matches)
+  TS-10: ------------------------------------------------
+  TS-11: ------------------------------------------------
+  TS-12: Test 3: SC — should fail (reservation cleared)
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: do_amo
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Combinational always block; ensure complete case coverage.
+- Localparams:
+  - OP_LR = 3'd0
+  - OP_SC = 3'd1
+  - OP_SWAP = 3'd2
+  - OP_ADD = 3'd3
+  - OP_AND = 3'd4
+  - OP_OR = 3'd5
+  - OP_XOR = 3'd6
+- FSM encoded with 7 states.

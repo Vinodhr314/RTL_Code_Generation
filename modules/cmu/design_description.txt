@@ -1,23 +1,92 @@
 Module: cmu
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — clock
-
-Clock management unit: PLL control, clock gating, and divider for RV32 SoC domains.
+================================================================================
+1. OVERVIEW
+================================================================================
+Clock management unit: PLL control, clock gating, and divider for RV32 SoC domains..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk_ref  input  — reference clock
-- rst_n  input  — input
-- clk_cpu  output  — RV32 core clock
-- clk_bus  output  — AXI/APB bus clock
-- clk_periph  output  — peripheral clock
-- pll_lock  output  — output
-- cfg [15:0]  input  — configuration
-- cfg_wr  input  — input
+Verification status: PASS
 
-Behavior:
-- Generates gated/divided clocks for core, bus, and peripherals.
-- Supports software clock enable per domain.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Clock management unit: PLL control, clock gating, and divider for RV32 SoC domains..
+FR-002: Reset shall initialize all registered outputs to documented defaults.
+FR-003: Interface signaling shall match tb/<name>_tb.v drive/monitor assumptions.
+FR-004: Generates gated/divided clocks for core (div1), bus (div2), and peripherals (div4) from clk_ref. pll_lock asserts after cfg_wr latches cfg. 
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk_ref | input | 1 | — | Input port (1); see functional behavior. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| clk_cpu | output | 1 | — | Output signal, width 1. |
+| clk_bus | output | 1 | — | Output signal, width 1. |
+| clk_periph | output | 1 | — | Output signal, width 1. |
+| pll_lock | output | 1 | — | Output port (1); see functional behavior. |
+| cfg | input | [15:0] | — | Input port ([15:0]); see functional behavior. |
+| cfg_wr | input | 1 | — | Input port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk_ref (input, 1, —): Input port (1); see functional behavior.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- clk_cpu (output, 1, —): Output signal, width 1.
+- clk_bus (output, 1, —): Output signal, width 1.
+- clk_periph (output, 1, —): Output signal, width 1.
+- pll_lock (output, 1, —): Output port (1); see functional behavior.
+- cfg (input, [15:0], —): Input port ([15:0]); see functional behavior.
+- cfg_wr (input, 1, —): Input port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock/reset: refer to port list and RTL always blocks.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Generates gated/divided clocks for core (div1), bus (div2), and peripherals (div4) from clk_ref. pll_lock asserts after cfg_wr latches cfg. cfg[3:0]=cpu div, cfg[7:4]=bus div, cfg[11:8]=periph div (0=pass-through).
+
+RTL header notes:
+- cmu — Clock management unit (Verilog-2005)
+- Divides clk_ref for cpu (div1), bus (div2), periph (div4). pll_lock on cfg_wr.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/cmu_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

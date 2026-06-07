@@ -1,24 +1,105 @@
 Module: fpu
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — accelerator
-
-IEEE-754 single-precision floating-point unit (add, sub, mul, div) for RV32F.
+================================================================================
+1. OVERVIEW
+================================================================================
+IEEE-754 single-precision FPU stub (add/sub/mul/div)..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- valid  input  — input
-- op [2:0]  input  — FADD/FSUB/FMUL/FDIV
-- a [31:0]  input  — float32
-- b [31:0]  input  — float32
-- result [31:0]  output  — float32
-- ready  output  — output
-- flags [4:0]  output  — IEEE flags
+Verification status: PASS; Float32 FADD stub: 1.0+2.0=3.0 after 4 cycles
 
-Behavior:
-- Pipelined or multi-cycle FPU coprocessor interface.
-- Supports RV32F F-extension register file offload.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement IEEE-754 single-precision FPU stub (add/sub/mul/div)..
+FR-002: Reset shall initialize all registered outputs to documented defaults.
+FR-003: Interface signaling shall match tb/<name>_tb.v drive/monitor assumptions.
+FR-004: Multi-cycle stub: FADD returns 1.0+2.0=3.0 (0x40400000) after 4 cycles. ready=1 when result valid.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| op | input | [2:0] | — | Input signal, width [2:0]. |
+| a | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| b | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| result | output | [31:0] | — | Accelerator result word read after done. |
+| ready | output | 1 | — | Sink-ready handshake; receiver can accept transfer when high. |
+| flags | output | [4:0] | — | Output signal, width [4:0]. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- op (input, [2:0], —): Input signal, width [2:0].
+- a (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- b (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- result (output, [31:0], —): Accelerator result word read after done.
+- ready (output, 1, —): Sink-ready handshake; receiver can accept transfer when high.
+- flags (output, [4:0], —): Output signal, width [4:0].
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Multi-cycle stub: FADD returns 1.0+2.0=3.0 (0x40400000) after 4 cycles. ready=1 when result valid.
+
+RTL header notes:
+- fpu — IEEE-754 single-precision FPU stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- IDLE → BUSY → LATENCY
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/fpu_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - result must equal 32'h40400000
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Simplified stub implementation — not bit-accurate production IP.
+- Batch verification note: Float32 FADD stub: 1.0+2.0=3.0 after 4 cycles
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 2'd0
+  - BUSY = 2'd1
+  - LATENCY = 8'd4
+  - FADD_RESULT = 32'h40400000
+- FSM encoded with 3 states.

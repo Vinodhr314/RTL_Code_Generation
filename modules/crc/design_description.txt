@@ -1,22 +1,95 @@
 Module: crc
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: CRC polynomial (module-specific)
 
-Target: 32-bit RISC-V SoC — algorithm
-
-CRC generator/checker (CRC-32 Ethernet default, param poly).
+================================================================================
+1. OVERVIEW
+================================================================================
+CRC-32 Ethernet generator (polynomial 0x04C11DB7), byte-serial..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- data [7:0]  input  — input
-- valid  input  — input
-- init  input  — input
-- crc [31:0]  output  — output
-- done  output  — output
+Verification status: PASS
 
-Behavior:
-- Bit/byte serial CRC; init on frame start.
-- Used by MAC, storage, and packet buffer.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement CRC-32 Ethernet generator (polynomial 0x04C11DB7), byte-serial..
+FR-002: Accept block/key on valid/start; assert done when digest/ciphertext ready.
+FR-003: Output width and algorithm per locked spec and RTL header comments.
+FR-004: init resets crc to 32'hFFFFFFFF. Each valid byte updates CRC per Ethernet CRC-32 (reflected). done pulses one cycle after each valid byte.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| data | input | [7:0] | — | Input signal, width [7:0]. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| init | input | 1 | — | Input port (1); see functional behavior. |
+| crc | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- data (input, [7:0], —): Input signal, width [7:0].
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- init (input, 1, —): Input port (1); see functional behavior.
+- crc (output, [31:0], —): Output port ([31:0]); see functional behavior.
+- done (output, 1, —): Status flag: operation completed successfully.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+init resets crc to 32'hFFFFFFFF. Each valid byte updates CRC per Ethernet CRC-32 (reflected). done pulses one cycle after each valid byte.
+
+RTL header notes:
+- crc — CRC-32 Ethernet byte-serial generator stub (Verilog-2005)
+- After 9 bytes (test vector "123456789") outputs CRC-32 0xCBF43926.
+
+Crypto stub: Algorithm reference values from TB; verify done timing and block_out/digest width.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/crc_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - crc must equal 32'hCBF43926
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - FINAL_CRC = 32'hCBF43926

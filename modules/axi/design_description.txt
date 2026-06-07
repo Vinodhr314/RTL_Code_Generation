@@ -1,16 +1,155 @@
 Module: axi
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — bus
-
-AXI4 interface definition / reusable AXI channel bundle module.
+================================================================================
+1. OVERVIEW
+================================================================================
+AXI4 slave stub with full AW/W/B/AR/R channel signals, 32-bit data, 32-bit address.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- Standard  AXI4  — AW/W/B/AR/R channel signals 32-bit data
+Verification status: PASS
 
-Behavior:
-- Reference AXI4 port list for RV32 SoC integration.
-- Use as template for master/slave stubs.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement AXI4 slave stub with full AW/W/B/AR/R channel signals, 32-bit data, 32-bit address.
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: AXI4-Lite slave stub with 4 32-bit registers (offset 0,4,8,C). Write: accept AW+W, respond with OKAY on B. Read: accept AR, return register 
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| aclk | input | 1 | — | AXI bus clock; sampled on rising edge. |
+| aresetn | input | 1 | — | AXI active-low reset; clears interface state. |
+| awvalid | input | 1 | active-high | AXI write address channel valid. |
+| awready | output | 1 | — | AXI write address channel ready. |
+| awaddr | input | [31:0] | — | AXI write address. |
+| awprot | input | [2:0] | — | Input signal, width [2:0]. |
+| wvalid | input | 1 | active-high | AXI write data channel valid. |
+| wready | output | 1 | — | AXI write data channel ready. |
+| wdata | input | [31:0] | — | AXI write data. |
+| wstrb | input | [3:0] | — | AXI write byte strobes. |
+| bvalid | output | 1 | — | AXI write response channel valid. |
+| bready | input | 1 | — | AXI write response channel ready. |
+| bresp | output | [1:0] | — | AXI write response code (OKAY=2'b00). |
+| arvalid | input | 1 | active-high | AXI read address channel valid. |
+| arready | output | 1 | — | AXI read address channel ready. |
+| araddr | input | [31:0] | — | AXI read address. |
+| arprot | input | [2:0] | — | Input signal, width [2:0]. |
+| rvalid | output | 1 | — | AXI read data channel valid. |
+| rready | input | 1 | — | AXI read data channel ready. |
+| rdata | output | [31:0] | — | AXI read data. |
+| rresp | output | [1:0] | — | AXI read response code. |
+
+3.2 Signal Descriptions
+- aclk (input, 1, —): AXI bus clock; sampled on rising edge.
+- aresetn (input, 1, —): AXI active-low reset; clears interface state.
+- awvalid (input, 1, active-high): AXI write address channel valid.
+- awready (output, 1, —): AXI write address channel ready.
+- awaddr (input, [31:0], —): AXI write address.
+- awprot (input, [2:0], —): Input signal, width [2:0].
+- wvalid (input, 1, active-high): AXI write data channel valid.
+- wready (output, 1, —): AXI write data channel ready.
+- wdata (input, [31:0], —): AXI write data.
+- wstrb (input, [3:0], —): AXI write byte strobes.
+- bvalid (output, 1, —): AXI write response channel valid.
+- bready (input, 1, —): AXI write response channel ready.
+- bresp (output, [1:0], —): AXI write response code (OKAY=2'b00).
+- arvalid (input, 1, active-high): AXI read address channel valid.
+- arready (output, 1, —): AXI read address channel ready.
+- araddr (input, [31:0], —): AXI read address.
+- arprot (input, [2:0], —): Input signal, width [2:0].
+- rvalid (output, 1, —): AXI read data channel valid.
+- rready (input, 1, —): AXI read data channel ready.
+- rdata (output, [31:0], —): AXI read data.
+- rresp (output, [1:0], —): AXI read response code.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single aclk (AXI).
+Reset: aresetn active-low.
+AXI handshakes: valid/ready per channel; respect TB task sequencing.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+AXI4-Lite slave stub with 4 32-bit registers (offset 0,4,8,C). Write: accept AW+W, respond with OKAY on B. Read: accept AR, return register data on R channel with OKAY.
+
+RTL header notes:
+- AXI4-Lite slave stub — 4 x 32-bit registers
+- Verilog-2005 synthesizable
+- Write address channel
+- Write data channel
+- Write response channel
+- Read address channel
+- Read data channel
+- 4 x 32-bit register bank
+
+FSM states (from RTL localparams):
+- WR_IDLE → WR_DATA → WR_RESP → RD_IDLE → RD_DATA
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/axi_tb.v
+
+6.2 Test Scenarios
+  TS-01: AXI write:
+  TS-02: 1. Wait for DUT ready BEFORE driving valid (avoids stale-ready issue)
+  TS-03: 2. Wait for bvalid BEFORE setting bready (avoids NBA suppression)
+  TS-04: Wait for bvalid BEFORE asserting bready
+  TS-05: AXI read:
+  TS-06: Same approach: wait for DUT arready, then wait for rvalid before rready
+  TS-07: Test 1: Write reg 0
+  TS-08: Test 2: Read back reg 0
+  TS-09: Test 3: Write and read reg 1
+  TS-10: Test 4: Write and read reg 2
+  TS-11: Test 5: Write and read reg 3
+  TS-12: Test 6: reg 0 still holds value
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'hDEAD_BEEF
+  - rd must equal 32'hCAFE_BABE
+  - rd must equal 32'h1234_5678
+  - rd must equal 32'hABCD_EF01
+  - rd[7:0] must equal 8'h55
+  - rd[31:8] must equal 24'hDEADBE
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: axi_read, axi_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Simplified stub implementation — not bit-accurate production IP.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).
+- Localparams:
+  - WR_IDLE = 2'd0
+  - WR_DATA = 2'd1
+  - WR_RESP = 2'd2
+  - RD_IDLE = 1'b0
+  - RD_DATA = 1'b1
+- FSM encoded with 5 states.

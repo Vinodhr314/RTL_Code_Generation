@@ -1,26 +1,109 @@
 Module: power_of_two_check
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — algorithm accelerator / reference RTL
-
-Power of 2 Check: Return 1 if input is power of two, else 0.
+================================================================================
+1. OVERVIEW
+================================================================================
+power_of_two_check.
 
 Integration context:
 - Exposed as memory-mapped accelerator or standalone test module for RV32 validation
 - Parameters: N (array size), DATA_W=32 default
 
-Ports:
-- clk        input 1   — system clock
-- rst_n      input 1   — async active-low reset
-- start      input 1   — begin operation
-- base_addr  [31:0] input — pointer to data structure in RV32 memory space
-- length     [15:0] input — element count or problem size
-- done       output 1  — operation complete
-- busy       output 1  — operation in progress
-- result     [31:0] output — primary result (index, gcd, count, etc.)
-- irq        output 1  — optional completion interrupt
+Verification status: PASS; Accelerator stub: result=1
 
-Behavior:
-- Reads/writes data via external memory interface or direct array ports (param ARRAY_MODE)
-- Implements Power of 2 Check per standard algorithm definition
-- Completes with done=1; sets result register for software poll
-- Verilog-2005 synthesizable; FSM or microcoded control acceptable
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement power_of_two_check.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: power_of_two_check accelerator stub.
+FR-005: power_of_two_check accelerator stub
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| base_addr | input | [31:0] | — | Memory base address for accelerator DMA/MMIO (may be ignored in stub). |
+| length | input | [15:0] | — | Transfer or graph length parameter (may be ignored in stub). |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| result | output | [31:0] | — | Accelerator result word read after done. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- base_addr (input, [31:0], —): Memory base address for accelerator DMA/MMIO (may be ignored in stub).
+- length (input, [15:0], —): Transfer or graph length parameter (may be ignored in stub).
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+- result (output, [31:0], —): Accelerator result word read after done.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+power_of_two_check accelerator stub
+
+RTL header notes:
+- power_of_two_check — algorithm accelerator stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- IDLE → BUSY_ST → DONE_ST
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/power_of_two_check_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `run_accel` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - result must equal exp
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: run_accel
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Simplified stub implementation — not bit-accurate production IP.
+- Batch verification note: Accelerator stub: result=1
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 2'd0
+  - BUSY_ST = 2'd1
+  - DONE_ST = 2'd2
+  - CYCLES = 8'd8
+  - RESULT = 32'd1
+- FSM encoded with 3 states.

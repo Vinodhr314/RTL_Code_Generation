@@ -1,30 +1,117 @@
 Module: gp_dma
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — dma
-
-General-purpose DMA engine for memory-to-memory and memory-to-peripheral transfers.
+================================================================================
+1. OVERVIEW
+================================================================================
+General-purpose DMA engine for memory-to-memory transfers..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — input
-- src [31:0]  input  — input
-- dst [31:0]  input  — input
-- len [15:0]  input  — byte count
-- done  output  — output
-- busy  output  — output
-- irq  output  — output
-- mem_addr [31:0]  output  — output
-- mem_wdata [31:0]  output  — output
-- mem_wen  output  — output
-- mem_ren  output  — output
-- mem_rdata [31:0]  input  — input
-- mem_ready  input  — input
+Verification status: PASS; Split read/write pending flags; avoid mem_wen<=0 same cycle as <=1
 
-Behavior:
-- Single-channel GP-DMA with programmable src/dst/length registers.
-- Releases RV32 core from bulk memcpy.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement General-purpose DMA engine for memory-to-memory transfers..
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: On start: copy len bytes from src to dst via mem interface (4 bytes per beat). done+irq pulse when complete.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| src | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| dst | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| len | input | [15:0] | — | Input port ([15:0]); see functional behavior. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+| mem_addr | output | [31:0] | — | Output signal, width [31:0]. |
+| mem_wdata | output | [31:0] | — | Output signal, width [31:0]. |
+| mem_wen | output | 1 | — | Output signal, width 1. |
+| mem_ren | output | 1 | — | Output signal, width 1. |
+| mem_rdata | input | [31:0] | — | Input signal, width [31:0]. |
+| mem_ready | input | 1 | — | Input signal, width 1. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- src (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- dst (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- len (input, [15:0], —): Input port ([15:0]); see functional behavior.
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+- mem_addr (output, [31:0], —): Output signal, width [31:0].
+- mem_wdata (output, [31:0], —): Output signal, width [31:0].
+- mem_wen (output, 1, —): Output signal, width 1.
+- mem_ren (output, 1, —): Output signal, width 1.
+- mem_rdata (input, [31:0], —): Input signal, width [31:0].
+- mem_ready (input, 1, —): Input signal, width 1.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+On start: copy len bytes from src to dst via mem interface (4 bytes per beat). done+irq pulse when complete.
+
+RTL header notes:
+- gp_dma — General-purpose DMA stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- IDLE → READ_ST → WRITE_ST → DONE_ST
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/gp_dma_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - mem[(32'h200 >> 2) + i] must equal (32'hA000_0000 + i
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Split read/write pending flags; avoid mem_wen<=0 same cycle as <=1
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 2'd0
+  - READ_ST = 2'd1
+  - WRITE_ST = 2'd2
+  - DONE_ST = 2'd3
+- FSM encoded with 4 states.

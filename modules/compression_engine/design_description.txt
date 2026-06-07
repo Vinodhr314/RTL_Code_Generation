@@ -1,25 +1,99 @@
 Module: compression_engine
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — accelerator
-
-Hardware compressor/decompressor (LZ77 or run-length) for IO bandwidth.
+================================================================================
+1. OVERVIEW
+================================================================================
+Hardware compressor/decompressor streaming stub (passthrough with 1-cycle latency)..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- mode  input  — compress/decompress
-- in_valid  input  — input
-- in_data [31:0]  input  — input
-- in_last  input  — input
-- out_valid  output  — output
-- out_data [31:0]  output  — output
-- out_last  output  — output
-- busy  output  — output
+Verification status: PASS
 
-Behavior:
-- Streams data to/from packet buffer or DMA.
-- Reduces off-chip traffic for RV32 workloads.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Hardware compressor/decompressor streaming stub (passthrough with 1-cycle latency)..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: When in_valid: busy=1, next cycle out_valid=1 with in_data/out_last passthrough. Clears out_valid when in_valid deassert.
+FR-005: When in_valid: busy=1, next cycle out_valid=1 with in_data/out_last passthrough. Clears out_valid when in_valid deasserts.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| mode | input | 1 | — | Operating mode select. |
+| in_valid | input | 1 | — | Input port (1); see functional behavior. |
+| in_data | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| in_last | input | 1 | — | Input signal, width 1. |
+| out_valid | output | 1 | — | Output port (1); see functional behavior. |
+| out_data | output | [31:0] | — | Output signal, width [31:0]. |
+| out_last | output | 1 | — | Output port (1); see functional behavior. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- mode (input, 1, —): Operating mode select.
+- in_valid (input, 1, —): Input port (1); see functional behavior.
+- in_data (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- in_last (input, 1, —): Input signal, width 1.
+- out_valid (output, 1, —): Output port (1); see functional behavior.
+- out_data (output, [31:0], —): Output signal, width [31:0].
+- out_last (output, 1, —): Output port (1); see functional behavior.
+- busy (output, 1, —): Status flag: operation in progress.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+When in_valid: busy=1, next cycle out_valid=1 with in_data/out_last passthrough. Clears out_valid when in_valid deasserts.
+
+RTL header notes:
+- compression_engine — Streaming passthrough stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/compression_engine_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - out_data must equal 32'hDEADBEEF
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

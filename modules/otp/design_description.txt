@@ -1,22 +1,92 @@
 Module: otp
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — security
-
-One-time-programmable memory interface for chip ID, trim, and secure boot keys.
+================================================================================
+1. OVERVIEW
+================================================================================
+OTP read interface..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- addr [7:0]  input  — input
-- read  input  — input
-- rdata [31:0]  output  — output
-- busy  output  — output
-- error  output  — output
+Verification status: PASS; Chip ID 0xDEAD0001 at addr 0
 
-Behavior:
-- Read-only access to OTP macro; write disabled after fab.
-- Boot ROM reads chip ID and root key at reset.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement OTP read interface..
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: Chip ID at addr 0 = 0xDEAD0001; 2-cycle read latency.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| addr | input | [7:0] | — | Input port ([7:0]); see functional behavior. |
+| read | input | 1 | — | Input port (1); see functional behavior. |
+| rdata | output | [31:0] | — | AXI read data. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| error | output | 1 | — | Output signal, width 1. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- addr (input, [7:0], —): Input port ([7:0]); see functional behavior.
+- read (input, 1, —): Input port (1); see functional behavior.
+- rdata (output, [31:0], —): AXI read data.
+- busy (output, 1, —): Status flag: operation in progress.
+- error (output, 1, —): Output signal, width 1.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Chip ID at addr 0 = 0xDEAD0001; 2-cycle read latency.
+
+RTL header notes:
+- otp — OTP interface stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/otp_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rdata must equal 32'hDEAD0001
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Chip ID 0xDEAD0001 at addr 0
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

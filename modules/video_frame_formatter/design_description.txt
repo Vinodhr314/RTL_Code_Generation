@@ -1,24 +1,98 @@
 Module: video_frame_formatter
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — media
-
-Formats raw pixel streams into frame lines with sync/porch for display output.
+================================================================================
+1. OVERVIEW
+================================================================================
+video_frame_formatter.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- pixel [23:0]  input  — RGB
-- valid  input  — input
-- hsync  output  — output
-- vsync  output  — output
-- de  output  — data enable
-- line [11:0]  output  — output
-- frame [11:0]  output  — output
+Verification status: PASS; de on valid pixel stream
 
-Behavior:
-- Generates timing for configured resolution; buffers line via FIFO.
-- DMA feeds pixel data from RV32 memory.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement video_frame_formatter.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Video frame timing generator.
+FR-005: Video frame timing generator
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| pixel | input | [23:0] | — | Input signal, width [23:0]. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| hsync | output | 1 | — | Output signal, width 1. |
+| vsync | output | 1 | — | Output signal, width 1. |
+| de | output | 1 | — | Output port (1); see functional behavior. |
+| line | output | [11:0] | — | Output signal, width [11:0]. |
+| frame | output | [11:0] | — | Output port ([11:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- pixel (input, [23:0], —): Input signal, width [23:0].
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- hsync (output, 1, —): Output signal, width 1.
+- vsync (output, 1, —): Output signal, width 1.
+- de (output, 1, —): Output port (1); see functional behavior.
+- line (output, [11:0], —): Output signal, width [11:0].
+- frame (output, [11:0], —): Output port ([11:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Video frame timing generator
+
+RTL header notes:
+- video_frame_formatter — display timing stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/video_frame_formatter_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: de on valid pixel stream
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

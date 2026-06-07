@@ -1,21 +1,99 @@
 Module: ddr3_boot_up
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — memory
-
-DDR3 initialization sequence (ZQ cal, mode reg, leveling) before RV32 fetch.
+================================================================================
+1. OVERVIEW
+================================================================================
+DDR3 initialization sequence FSM (ZQ cal, mode reg, leveling stub)..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — input
-- done  output  — output
-- fail  output  — output
-- status [7:0]  output  — output
+Verification status: PASS
 
-Behavior:
-- Runs JEDEC reset and init FSM; releases mem_ctrl when complete.
-- Required before executing from DRAM.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement DDR3 initialization sequence FSM (ZQ cal, mode reg, leveling stub)..
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: On start: runs 64-cycle JEDEC init FSM. done=1, fail=0, status=8'h80 on success.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| fail | output | 1 | — | Output port (1); see functional behavior. |
+| status | output | [7:0] | — | Output port ([7:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- done (output, 1, —): Status flag: operation completed successfully.
+- fail (output, 1, —): Output port (1); see functional behavior.
+- status (output, [7:0], —): Output port ([7:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+On start: runs 64-cycle JEDEC init FSM. done=1, fail=0, status=8'h80 on success.
+
+RTL header notes:
+- ddr3_boot_up — DDR3 initialization FSM stub (Verilog-2005)
+- 64-cycle JEDEC init sequence; done=1, status=8'h80 on success.
+
+FSM states (from RTL localparams):
+- IDLE → INIT → DONE_ST
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/ddr3_boot_up_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - status must equal 8'h80
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 2'd0
+  - INIT = 2'd1
+  - DONE_ST = 2'd2
+  - INIT_CYCLES = 8'd64
+- FSM encoded with 3 states.

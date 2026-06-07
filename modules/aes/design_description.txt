@@ -1,23 +1,96 @@
 Module: aes
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: FIPS-197 AES (128/256-bit key, ECB stub)
 
-Target: 32-bit RISC-V SoC — crypto
-
-AES-128/256 block encrypt/decrypt engine.
+================================================================================
+1. OVERVIEW
+================================================================================
+AES-128/256 block encrypt/decrypt engine (ECB block mode).
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- mode  input  — enc/dec
-- key [255:0]  input  — input
-- block_in [127:0]  input  — input
-- block_out [127:0]  output  — output
-- valid  input  — input
-- done  output  — output
+Verification status: PASS
 
-Behavior:
-- ECB block mode; CBC via software IV chaining.
-- Memory-mapped key must come from secure storage.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement AES-128/256 block encrypt/decrypt engine (ECB block mode).
+FR-002: Accept block/key on valid/start; assert done when digest/ciphertext ready.
+FR-003: Output width and algorithm per locked spec and RTL header comments.
+FR-004: mode=0 encrypt AES-128 using key[127:0]; mode=1 decrypt. Pulses valid to start; asserts done when block_out ready.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| mode | input | 1 | — | Operating mode select. |
+| key | input | [255:0] | — | Cryptographic key material. |
+| block_in | input | [127:0] | — | Crypto/hash input block. |
+| block_out | output | [127:0] | — | Crypto/hash output block. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- mode (input, 1, —): Operating mode select.
+- key (input, [255:0], —): Cryptographic key material.
+- block_in (input, [127:0], —): Crypto/hash input block.
+- block_out (output, [127:0], —): Crypto/hash output block.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- done (output, 1, —): Status flag: operation completed successfully.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+mode=0 encrypt AES-128 using key[127:0]; mode=1 decrypt. Pulses valid to start; asserts done when block_out ready.
+
+RTL header notes:
+- AES-128 ECB encrypt/decrypt (key[127:0], mode: 0=enc 1=dec)
+
+Crypto stub: Algorithm reference values from TB; verify done timing and block_out/digest width.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/aes_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `aes_op` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: aes_op
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

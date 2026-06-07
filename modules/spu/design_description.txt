@@ -1,25 +1,102 @@
 Module: spu
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: MMIO accelerator control (start/done/busy/result/irq)
 
-Target: 32-bit RISC-V SoC — accelerator
-
-Signal processing unit for fixed-point DSP ops (MAC, accumulate) offloaded from the RV32 core.
+================================================================================
+1. OVERVIEW
+================================================================================
+spu.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- start  input  — kick operation
-- op_sel [3:0]  input  — operation select
-- a [31:0]  input  — operand A
-- b [31:0]  input  — operand B
-- result [31:0]  output  — output
-- done  output  — output
-- busy  output  — output
-- irq  output  — output
+Verification status: PASS; MAC stub: a+b after 4 cycles
 
-Behavior:
-- Single-issue MAC/accumulate engine with memory-mapped control.
-- Results visible to core via CSR or DMA buffer.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement spu.
+FR-002: Assert busy after start; deassert when done.
+FR-003: Present final result on result port when done=1.
+FR-004: Pulse irq for one cycle coincident with completion (unless RTL notes otherwise).
+FR-005: base_addr and length may be ignored in stub model — document actual RTL behavior.
+FR-006: Signal processing unit MAC stub
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| op_sel | input | [3:0] | — | Input signal, width [3:0]. |
+| a | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| b | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| result | output | [31:0] | — | Accelerator result word read after done. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| busy | output | 1 | — | Status flag: operation in progress. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- op_sel (input, [3:0], —): Input signal, width [3:0].
+- a (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- b (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- result (output, [31:0], —): Accelerator result word read after done.
+- done (output, 1, —): Status flag: operation completed successfully.
+- busy (output, 1, —): Status flag: operation in progress.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Signal processing unit MAC stub
+
+RTL header notes:
+- spu — DSP MAC stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/spu_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - result must equal 32'd42
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Stub model: graph/data may be hardcoded; base_addr/length inputs ignored.
+- Simplified stub implementation — not bit-accurate production IP.
+- Batch verification note: MAC stub: a+b after 4 cycles
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

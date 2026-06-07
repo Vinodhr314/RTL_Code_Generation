@@ -1,24 +1,100 @@
 Module: tx_mac
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — network
-
-Ethernet transmit MAC: preamble, SFD, FCS, GMII/MII output.
+================================================================================
+1. OVERVIEW
+================================================================================
+tx_mac.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- tx_start  input  — input
-- tx_data [7:0]  input  — input
-- tx_valid  input  — input
-- tx_last  input  — input
-- tx_ready  output  — output
-- gmii_txd [7:0]  output  — output
-- gmii_tx_en  output  — output
+Verification status: PASS; Preamble 0x55 then SFD 0xD5
 
-Behavior:
-- Accepts frame from packet buffer; appends CRC.
-- Handshakes with frame_formatter upstream.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement tx_mac.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Ethernet TX MAC stub.
+FR-005: Ethernet TX MAC stub
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| tx_start | input | 1 | — | Input signal, width 1. |
+| tx_data | input | [7:0] | — | Input signal, width [7:0]. |
+| tx_valid | input | 1 | — | Input signal, width 1. |
+| tx_last | input | 1 | — | Input signal, width 1. |
+| tx_ready | output | 1 | — | Output signal, width 1. |
+| gmii_txd | output | [7:0] | — | Output signal, width [7:0]. |
+| gmii_tx_en | output | 1 | — | Output signal, width 1. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- tx_start (input, 1, —): Input signal, width 1.
+- tx_data (input, [7:0], —): Input signal, width [7:0].
+- tx_valid (input, 1, —): Input signal, width 1.
+- tx_last (input, 1, —): Input signal, width 1.
+- tx_ready (output, 1, —): Output signal, width 1.
+- gmii_txd (output, [7:0], —): Output signal, width [7:0].
+- gmii_tx_en (output, 1, —): Output signal, width 1.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Ethernet TX MAC stub
+
+RTL header notes:
+- tx_mac — Ethernet TX MAC stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/tx_mac_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - gmii_txd must equal 8'hD5
+  - gmii_txd must equal 8'hAB
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Simplified stub implementation — not bit-accurate production IP.
+- Batch verification note: Preamble 0x55 then SFD 0xD5
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

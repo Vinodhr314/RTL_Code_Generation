@@ -1,23 +1,91 @@
 Module: debug_module
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — debug
-
-RISC-V Debug Module 0.13 (halt, resume, abstract GPR access).
+================================================================================
+1. OVERVIEW
+================================================================================
+RISC-V Debug Module 0.13 stub: halt/resume control and abstract GPR access..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- dmi  input  — from JTAG DTM
-- halt_req  output  — output
-- resume_req  output  — output
-- halted  input  — from core
-- abstract_data [31:0]  inout  — inout
-- error  output  — output
+Verification status: PASS; Level-sensitive dmi[1:0] decode; clear dmi between commands in TB
 
-Behavior:
-- Implements DM registers; controls RV32 hart halt/resume.
-- Exposes GPR/FPR via abstract command FSM.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement RISC-V Debug Module 0.13 stub: halt/resume control and abstract GPR access..
+FR-002: Reset shall initialize all registered outputs to documented defaults.
+FR-003: Interface signaling shall match tb/<name>_tb.v drive/monitor assumptions.
+FR-004: dmi[1:0]=01 halt, 10 resume, 11 read GPR to abstract_data. Assert halt_req/resume_req one cycle. error=0 on valid commands.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| dmi | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| halt_req | output | 1 | — | Output port (1); see functional behavior. |
+| resume_req | output | 1 | — | Output port (1); see functional behavior. |
+| halted | input | 1 | — | Input signal, width 1. |
+| abstract_data | inout | [31:0] | — | Inout port ([31:0]); see functional behavior. |
+| error | output | 1 | — | Output port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- dmi (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- halt_req (output, 1, —): Output port (1); see functional behavior.
+- resume_req (output, 1, —): Output port (1); see functional behavior.
+- halted (input, 1, —): Input signal, width 1.
+- abstract_data (inout, [31:0], —): Inout port ([31:0]); see functional behavior.
+- error (output, 1, —): Output port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+dmi[1:0]=01 halt, 10 resume, 11 read GPR to abstract_data. Assert halt_req/resume_req one cycle. error=0 on valid commands.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/debug_module_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - abstract_data must equal 32'h0000_0042
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Level-sensitive dmi[1:0] decode; clear dmi between commands in TB
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

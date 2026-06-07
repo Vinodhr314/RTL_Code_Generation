@@ -1,22 +1,93 @@
 Module: admission_control
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — network
-
+================================================================================
+1. OVERVIEW
+================================================================================
 Rate/token-bucket admission control for inbound/outbound SoC traffic.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- pkt_valid  input  — input
-- class [3:0]  input  — input
-- accept  output  — output
-- drop  output  — output
-- tokens [15:0]  input  — config
+Verification status: PASS
 
-Behavior:
-- Per-class token buckets; drops when exceeded.
-- Protects RV32 from network floods.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Rate/token-bucket admission control for inbound/outbound SoC traffic.
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: Per-class token buckets (16 classes). On pkt_valid, accept if bucket[class]>0 and decrement; else drop. Buckets reload to tokens on reset.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| pkt_valid | input | 1 | — | Input port (1); see functional behavior. |
+| traffic_class | input | [3:0] | — | Input signal, width [3:0]. |
+| accept | output | 1 | — | Output port (1); see functional behavior. |
+| drop | output | 1 | — | Output port (1); see functional behavior. |
+| tokens | input | [15:0] | — | Input port ([15:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- pkt_valid (input, 1, —): Input port (1); see functional behavior.
+- traffic_class (input, [3:0], —): Input signal, width [3:0].
+- accept (output, 1, —): Output port (1); see functional behavior.
+- drop (output, 1, —): Output port (1); see functional behavior.
+- tokens (input, [15:0], —): Input port ([15:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Per-class token buckets (16 classes). On pkt_valid, accept if bucket[class]>0 and decrement; else drop. Buckets reload to tokens on reset.
+
+RTL header notes:
+- Token-bucket admission control — 16 traffic classes
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/admission_control_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `send_pkt` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: send_pkt
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

@@ -1,28 +1,116 @@
 Module: uart
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: APB3 + UART pin bundle (stub)
 
-Target: 32-bit RISC-V SoC — peripheral
-
-Universal asynchronous receiver/transmitter with configurable baud, TX/RX FIFOs, and interrupt on frame complete.
+================================================================================
+1. OVERVIEW
+================================================================================
+uart.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — active-low async reset
-- tx  input  — serial transmit bit
-- rx  output  — serial receive bit
-- pwdata [31:0]  input  — APB write data
-- paddr [11:0]  input  — APB address
-- pwrite  input  — input
-- psel  input  — input
-- penable  input  — input
-- prdata [31:0]  output  — APB read data
-- pready  output  — output
-- irq  output  — interrupt when TX empty or RX data ready
+Verification status: PASS; APB 4-reg; irq on reg0[0]
 
-Behavior:
-- APB-programmable 16550-style UART for RV32 debug and host communication.
-- Baud derived from SoC clock via divisor register.
-- Supports 8N1 default framing.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement uart.
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: APB UART peripheral
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| tx | input | 1 | — | Serial transmit line (UART/SPI). |
+| rx | output | 1 | — | Serial receive line (UART/SPI). |
+| pwdata | input | [31:0] | — | APB write data bus (32-bit). |
+| paddr | input | [11:0] | — | APB byte address of the transfer. |
+| pwrite | input | 1 | active-high | APB transfer direction: 1=write, 0=read. |
+| psel | input | 1 | active-high | APB peripheral select; high during SETUP and ACCESS phases. |
+| penable | input | 1 | active-high | APB enable; low in SETUP, high in ACCESS phase. |
+| prdata | output | [31:0] | — | APB read data bus (32-bit). |
+| pready | output | 1 | — | APB slave ready; 1 completes data phase. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- tx (input, 1, —): Serial transmit line (UART/SPI).
+- rx (output, 1, —): Serial receive line (UART/SPI).
+- pwdata (input, [31:0], —): APB write data bus (32-bit).
+- paddr (input, [11:0], —): APB byte address of the transfer.
+- pwrite (input, 1, active-high): APB transfer direction: 1=write, 0=read.
+- psel (input, 1, active-high): APB peripheral select; high during SETUP and ACCESS phases.
+- penable (input, 1, active-high): APB enable; low in SETUP, high in ACCESS phase.
+- prdata (output, [31:0], —): APB read data bus (32-bit).
+- pready (output, 1, —): APB slave ready; 1 completes data phase.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+APB UART peripheral
+
+RTL header notes:
+- uart — APB UART stub (Verilog-2005)
+
+Register map (APB byte addresses):
+- 0x000 — REG0 (regs[0])
+- 0x004 — REG1 (regs[1])
+- 0x008 — REG2 (regs[2])
+- 0x00C — REG3 (regs[3])
+
+APB protocol: Address latched when psel=1 and penable=0. Read/write completes when psel=1, penable=1, pready=1.
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/uart_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `apb_read` per TB initial block.
+  TS-02: Exercise task `apb_write` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - rd must equal 32'hDEAD_BEEF
+  - APB write addr=12'h0 data=32'hDEAD_BEEF
+  - APB write addr=12'h0 data=32'h0000_0001
+  - APB read addr=12'h0 — compare prdata to prior write
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: apb_read, apb_write
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Unmapped addresses may read undefined data; pslverr tied low in RTL.
+- Batch verification note: APB 4-reg; irq on reg0[0]
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).

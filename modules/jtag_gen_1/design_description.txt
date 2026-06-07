@@ -1,20 +1,90 @@
 Module: jtag_gen_1
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: IEEE 1149.1 JTAG
 
-Target: 32-bit RISC-V SoC — debug
-
-Generation-1 JTAG variant with extended DR chain for production test.
+================================================================================
+1. OVERVIEW
+================================================================================
+Extended JTAG with 64-bit DR chain..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- tck  input  — input
-- tms  input  — input
-- tdi  input  — input
-- tdo  output  — output
-- ext_dr [63:0]  inout  — extended data register
+Verification status: PASS; Shift {shift[63:1],tdi}; ext_dr high-Z; 1-cycle tdo check
 
-Behavior:
-- Backward compatible with jtag; adds MBIST and IDCODE regs.
-- Select via TAP IR opcode map.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Extended JTAG with 64-bit DR chain..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Shifts ext_dr chain; tdo = ext_dr[0]..
+FR-005: Shifts ext_dr chain; tdo = ext_dr[0].
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| tck | input | 1 | — | Input signal, width 1. |
+| tms | input | 1 | — | Input signal, width 1. |
+| tdi | input | 1 | — | Input signal, width 1. |
+| tdo | output | 1 | — | Output port (1); see functional behavior. |
+| ext_dr | inout | [63:0] | — | Inout port ([63:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- tck (input, 1, —): Input signal, width 1.
+- tms (input, 1, —): Input signal, width 1.
+- tdi (input, 1, —): Input signal, width 1.
+- tdo (output, 1, —): Output port (1); see functional behavior.
+- ext_dr (inout, [63:0], —): Inout port ([63:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Shifts ext_dr chain; tdo = ext_dr[0].
+
+RTL header notes:
+- jtag_gen_1 — extended JTAG stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/jtag_gen_1_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - tdo must equal 1'b1
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: Shift {shift[63:1],tdi}; ext_dr high-Z; 1-cycle tdo check
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Purely combinational logic (continuous assignments).

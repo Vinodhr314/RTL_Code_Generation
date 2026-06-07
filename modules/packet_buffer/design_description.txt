@@ -1,25 +1,99 @@
 Module: packet_buffer
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: ARM AMBA AXI4 / AXI4-Lite
 
-Target: 32-bit RISC-V SoC — network
-
-Dual-port SRAM packet buffer for RX/TX Ethernet frames.
+================================================================================
+1. OVERVIEW
+================================================================================
+Dual-port packet SRAM buffer (4KB)..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- wr_en  input  — input
-- wr_addr [11:0]  input  — input
-- wr_data [31:0]  input  — input
-- rd_en  input  — input
-- rd_addr [11:0]  input  — input
-- rd_data [31:0]  output  — output
-- full  output  — output
-- empty  output  — output
+Verification status: PASS; 1024-word dual-port SRAM
 
-Behavior:
-- 4 KB default buffer; CPU/DMA read/write ports.
-- Decouples MAC from RV32 stack processing.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Dual-port packet SRAM buffer (4KB)..
+FR-002: Slave shall accept AXI4 write/read bursts per channel handshake rules.
+FR-003: awready/wready/arready shall follow RTL timing (typically immediate or registered).
+FR-004: bresp/rresp shall return OKAY (2'b00) on successful transfers.
+FR-005: 1024-word dual-port SRAM; full when all written once.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| wr_en | input | 1 | active-high | FIFO write enable; qualified when !full. |
+| wr_addr | input | [11:0] | — | Input signal, width [11:0]. |
+| wr_data | input | [31:0] | — | Input signal, width [31:0]. |
+| rd_en | input | 1 | active-high | FIFO read enable; qualified when !empty. |
+| rd_addr | input | [11:0] | — | Input signal, width [11:0]. |
+| rd_data | output | [31:0] | — | Output signal, width [31:0]. |
+| full | output | 1 | — | FIFO full flag; blocks writes when asserted. |
+| empty | output | 1 | — | FIFO empty flag; blocks reads when asserted. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- wr_en (input, 1, active-high): FIFO write enable; qualified when !full.
+- wr_addr (input, [11:0], —): Input signal, width [11:0].
+- wr_data (input, [31:0], —): Input signal, width [31:0].
+- rd_en (input, 1, active-high): FIFO read enable; qualified when !empty.
+- rd_addr (input, [11:0], —): Input signal, width [11:0].
+- rd_data (output, [31:0], —): Output signal, width [31:0].
+- full (output, 1, —): FIFO full flag; blocks writes when asserted.
+- empty (output, 1, —): FIFO empty flag; blocks reads when asserted.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+1024-word dual-port SRAM; full when all written once.
+
+RTL header notes:
+- packet_buffer — dual-port SRAM stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/packet_buffer_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rd_data must equal 32'hBEEF_0005
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: 1024-word dual-port SRAM
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

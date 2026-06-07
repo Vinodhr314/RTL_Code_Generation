@@ -1,19 +1,99 @@
 Module: barrel_shifter
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — datapath
-
-32-bit barrel shifter for ALU and crypto (logical/arithmetic, left/right).
+================================================================================
+1. OVERVIEW
+================================================================================
+32-bit barrel shifter: SLL (op=00), SRL (op=01), SRA (op=10). Default op=11 passes a through..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- a [31:0]  input  — input
-- shamt [4:0]  input  — shift amount
-- op [1:0]  input  — op type
-- y [31:0]  output  — output
+Verification status: PASS
 
-Behavior:
-- Combinational: SLL/SRL/SRA compatible with RV32I shift ops.
-- Used in ALU, multiplier, and crypto paths.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement 32-bit barrel shifter: SLL (op=00), SRL (op=01), SRA (op=10). Default op=11 passes a through..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Combinational. op=2b00 SLL, op=2b01 SRL, op=2b10 SRA (arithmetic), op=2b11 pass-through. All outputs purely combinationa.
+FR-005: Combinational. op=2b00 SLL, op=2b01 SRL, op=2b10 SRA (arithmetic), op=2b11 pass-through. All outputs purely combinational.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| a | input | [31:0] | — | Input port ([31:0]); see functional behavior. |
+| shamt | input | [4:0] | — | Input signal, width [4:0]. |
+| op | input | [1:0] | — | Input port ([1:0]); see functional behavior. |
+| y | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- a (input, [31:0], —): Input port ([31:0]); see functional behavior.
+- shamt (input, [4:0], —): Input signal, width [4:0].
+- op (input, [1:0], —): Input port ([1:0]); see functional behavior.
+- y (output, [31:0], —): Output port ([31:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Combinational. op=2b00 SLL, op=2b01 SRL, op=2b10 SRA (arithmetic), op=2b11 pass-through. All outputs purely combinational.
+
+RTL header notes:
+- barrel_shifter — 32-bit combinational barrel shifter (Verilog-2005)
+- op=00 SLL, op=01 SRL, op=10 SRA, op=11 pass-through
+
+FSM states (from RTL localparams):
+- SLL → SRL → SRA
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/barrel_shifter_tb.v
+
+6.2 Test Scenarios
+  TS-01: SLL (op=00)
+  TS-02: SRL (op=01)
+  TS-03: SRA (op=10) — arithmetic right shift preserves sign
+  TS-04: Pass-through (op=11)
+
+6.3 Expected Results / Scoreboard
+  - y must equal expected
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: check_result
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - SLL = 2'b00
+  - SRL = 2'b01
+  - SRA = 2'b10
+- FSM encoded with 3 states.

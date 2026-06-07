@@ -1,25 +1,104 @@
 Module: eth_stat
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — network
-
-Ethernet MAC statistics counter block (frames, errors, bytes).
+================================================================================
+1. OVERVIEW
+================================================================================
+Ethernet MAC statistics counter block..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- rx_frame  input  — pulse per frame
-- tx_frame  input  — input
-- rx_err  input  — input
-- tx_err  input  — input
-- byte_cnt [31:0]  output  — output
-- frame_cnt [31:0]  output  — output
-- err_cnt [31:0]  output  — output
-- clear  input  — input
+Verification status: PASS; Pulse tasks for rx/tx frame; level-sensitive count; clear resets all
 
-Behavior:
-- Software-readable via APB; used by network stack on RV32.
-- Counts cleared on write to CLEAR reg.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Ethernet MAC statistics counter block..
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: Increment frame_cnt on rx_frame or tx_frame pulse (+64 bytes each). Increment err_cnt on rx_err or tx_err. clear resets all counters.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| rx_frame | input | 1 | — | Input port (1); see functional behavior. |
+| tx_frame | input | 1 | — | Input port (1); see functional behavior. |
+| rx_err | input | 1 | — | Input port (1); see functional behavior. |
+| tx_err | input | 1 | — | Input port (1); see functional behavior. |
+| byte_cnt | output | [31:0] | — | Output signal, width [31:0]. |
+| frame_cnt | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+| err_cnt | output | [31:0] | — | Output port ([31:0]); see functional behavior. |
+| clear | input | 1 | — | Input port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- rx_frame (input, 1, —): Input port (1); see functional behavior.
+- tx_frame (input, 1, —): Input port (1); see functional behavior.
+- rx_err (input, 1, —): Input port (1); see functional behavior.
+- tx_err (input, 1, —): Input port (1); see functional behavior.
+- byte_cnt (output, [31:0], —): Output signal, width [31:0].
+- frame_cnt (output, [31:0], —): Output port ([31:0]); see functional behavior.
+- err_cnt (output, [31:0], —): Output port ([31:0]); see functional behavior.
+- clear (input, 1, —): Input port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Increment frame_cnt on rx_frame or tx_frame pulse (+64 bytes each). Increment err_cnt on rx_err or tx_err. clear resets all counters.
+
+RTL header notes:
+- eth_stat — Ethernet MAC statistics counters (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/eth_stat_tb.v
+
+6.2 Test Scenarios
+  TS-01: Exercise task `pulse_err` per TB initial block.
+  TS-02: Exercise task `pulse_rx` per TB initial block.
+  TS-03: Exercise task `pulse_tx` per TB initial block.
+
+6.3 Expected Results / Scoreboard
+  - frame_cnt must equal 32'd2
+  - byte_cnt must equal 32'd128
+  - err_cnt must equal 32'd1
+  - frame_cnt must equal 32'd0 || byte_cnt !== 32'd0 || err_cnt !== 32'd0
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: pulse_err, pulse_rx, pulse_tx
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Pulse tasks for rx/tx frame; level-sensitive count; clear resets all
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

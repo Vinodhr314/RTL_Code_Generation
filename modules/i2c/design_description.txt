@@ -1,26 +1,106 @@
 Module: i2c
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: I2C (Philips/NXP)
 
-Target: 32-bit RISC-V SoC — peripheral
-
-I2C master/slave controller for sensor and EEPROM access from RV32.
+================================================================================
+1. OVERVIEW
+================================================================================
+I2C master controller stub..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- scl  inout  — inout
-- sda  inout  — inout
-- addr [6:0]  input  — slave addr
-- data [7:0]  input  — TX byte
-- rw  input  — read/write
-- start  input  — input
-- done  output  — output
-- rdata [7:0]  output  — RX byte
-- irq  output  — output
+Verification status: PASS; I2C master FSM; read returns 0xAB
 
-Behavior:
-- Standard 100/400 kHz modes; clock stretching support.
-- Memory-mapped control from APB.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement I2C master controller stub..
+FR-002: APB register access for configuration and status.
+FR-003: Pin-level behavior (tx/rx/gpio/etc.) per RTL stub model.
+FR-004: I2C transaction completes in 8 cycles; read returns 0xAB.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| scl | inout | 1 | — | Inout signal, width 1. |
+| sda | inout | 1 | — | Inout signal, width 1. |
+| addr | input | [6:0] | — | Input signal, width [6:0]. |
+| data | input | [7:0] | — | Input signal, width [7:0]. |
+| rw | input | 1 | — | Input signal, width 1. |
+| start | input | 1 | active-high | Level or pulse command to begin accelerator operation. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+| rdata | output | [7:0] | — | AXI read data. |
+| irq | output | 1 | — | Interrupt request to CPU (typically level or one-cycle pulse). |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- scl (inout, 1, —): Inout signal, width 1.
+- sda (inout, 1, —): Inout signal, width 1.
+- addr (input, [6:0], —): Input signal, width [6:0].
+- data (input, [7:0], —): Input signal, width [7:0].
+- rw (input, 1, —): Input signal, width 1.
+- start (input, 1, active-high): Level or pulse command to begin accelerator operation.
+- done (output, 1, —): Status flag: operation completed successfully.
+- rdata (output, [7:0], —): AXI read data.
+- irq (output, 1, —): Interrupt request to CPU (typically level or one-cycle pulse).
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+I2C transaction completes in 8 cycles; read returns 0xAB.
+
+RTL header notes:
+- i2c — I2C master stub (Verilog-2005)
+
+FSM states (from RTL localparams):
+- IDLE → BUSY
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/i2c_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rdata must equal 8'hAB
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: I2C master FSM; read returns 0xAB
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - IDLE = 1'b0
+  - BUSY = 1'b1
+- FSM encoded with 2 states.

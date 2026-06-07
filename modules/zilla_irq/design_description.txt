@@ -1,20 +1,90 @@
 Module: zilla_irq
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — core
-
-Custom Zilla interrupt distribution unit for multi-source RV32 IRQ fan-in.
+================================================================================
+1. OVERVIEW
+================================================================================
+zilla_irq.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- src [31:0]  input  — IRQ bitmap
-- vec [7:0]  output  — highest priority vector
-- valid  output  — output
+Verification status: PASS; Highest set bit in src[31:0]
 
-Behavior:
-- Fast priority decode over 32 sources.
-- Pairs with interrupt_controller or replaces PLIC slice.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement zilla_irq.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Zilla IRQ priority decoder.
+FR-005: Zilla IRQ priority decoder
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| src | input | [31:0] | — | Input signal, width [31:0]. |
+| vec | output | [7:0] | — | Output signal, width [7:0]. |
+| valid | output | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- src (input, [31:0], —): Input signal, width [31:0].
+- vec (output, [7:0], —): Output signal, width [7:0].
+- valid (output, 1, active-high): Source-valid handshake; data/control is qualified when high.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Zilla IRQ priority decoder
+
+RTL header notes:
+- zilla_irq — IRQ fan-in priority decoder (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/zilla_irq_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - vec must equal 8'd10
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: Highest set bit in src[31:0]
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

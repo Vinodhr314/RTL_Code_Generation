@@ -1,21 +1,102 @@
 Module: csr
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — core
-
-Control/status register file interface for RV32 privileged CSRs.
+================================================================================
+1. OVERVIEW
+================================================================================
+RV32 privileged CSR file: mstatus, mie, mtvec..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- csr_addr [11:0]  input  — input
-- csr_wdata [31:0]  input  — input
-- csr_op [1:0]  input  — R/W/Set/Clear
-- csr_rdata [31:0]  output  — output
-- illegal  output  — output
+Verification status: PASS
 
-Behavior:
-- Decodes CSR address; read/write mstatus, mie, mtvec, etc.
-- Signals illegal instruction on bad CSR/ privilege.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement RV32 privileged CSR file: mstatus, mie, mtvec..
+FR-002: Reset shall initialize all registered outputs to documented defaults.
+FR-003: Interface signaling shall match tb/<name>_tb.v drive/monitor assumptions.
+FR-004: csr_op: 00=read, 01=write, 10=set, 11=clear. Addresses: 0x300=mstatus, 0x304=mie, 0x305=mtvec. illegal=1 for unknown addr.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| csr_addr | input | [11:0] | — | Input signal, width [11:0]. |
+| csr_wdata | input | [31:0] | — | Input signal, width [31:0]. |
+| csr_op | input | [1:0] | — | Input port ([1:0]); see functional behavior. |
+| csr_rdata | output | [31:0] | — | Output signal, width [31:0]. |
+| illegal | output | 1 | — | Output port (1); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- csr_addr (input, [11:0], —): Input signal, width [11:0].
+- csr_wdata (input, [31:0], —): Input signal, width [31:0].
+- csr_op (input, [1:0], —): Input port ([1:0]); see functional behavior.
+- csr_rdata (output, [31:0], —): Output signal, width [31:0].
+- illegal (output, 1, —): Output port (1); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+csr_op: 00=read, 01=write, 10=set, 11=clear. Addresses: 0x300=mstatus, 0x304=mie, 0x305=mtvec. illegal=1 for unknown addr.
+
+RTL header notes:
+- csr — RV32 privileged CSR file (Verilog-2005)
+
+FSM states (from RTL localparams):
+- CSR_MIE → OP_READ → OP_WRITE → OP_SET → OP_CLEAR
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/csr_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - csr_rdata must equal 32'h00001800
+  - csr_rdata must equal 32'h00000888
+  - csr_rdata must equal 32'h80000000
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Localparams:
+  - CSR_MSTATUS = 12'h300
+  - CSR_MIE = 12'h304
+  - CSR_MTVEC = 12'h305
+  - OP_READ = 2'b00
+  - OP_WRITE = 2'b01
+  - OP_SET = 2'b10
+  - OP_CLEAR = 2'b11
+- FSM encoded with 5 states.

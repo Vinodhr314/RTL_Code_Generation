@@ -1,23 +1,94 @@
 Module: pp_ext_mem
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: SoC internal interface
 
-Target: 32-bit RISC-V SoC — memory
-
-Processing pipeline external memory interface stage.
+================================================================================
+1. OVERVIEW
+================================================================================
+pp_ext_mem.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- addr [31:0]  input  — input
-- wdata [31:0]  input  — input
-- wen  input  — input
-- ren  input  — input
-- rdata [31:0]  output  — output
-- ready  output  — output
+Verification status: PASS; Latch addr; ready next cycle; TB #1
 
-Behavior:
-- Bridges PP datapath to external SRAM/DRAM port with registered interface.
-- Supports single-cycle or wait-state memory.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement pp_ext_mem.
+FR-002: Reset shall initialize all registered outputs to documented defaults.
+FR-003: Interface signaling shall match tb/<name>_tb.v drive/monitor assumptions.
+FR-004: External memory bridge
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| addr | input | [31:0] | — | Input signal, width [31:0]. |
+| wdata | input | [31:0] | — | AXI write data. |
+| wen | input | 1 | — | Input signal, width 1. |
+| ren | input | 1 | — | Input signal, width 1. |
+| rdata | output | [31:0] | — | AXI read data. |
+| ready | output | 1 | — | Sink-ready handshake; receiver can accept transfer when high. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- addr (input, [31:0], —): Input signal, width [31:0].
+- wdata (input, [31:0], —): AXI write data.
+- wen (input, 1, —): Input signal, width 1.
+- ren (input, 1, —): Input signal, width 1.
+- rdata (output, [31:0], —): AXI read data.
+- ready (output, 1, —): Sink-ready handshake; receiver can accept transfer when high.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: single clk.
+Reset: rst_n active-low (when present).
+All sequential outputs update on posedge clk unless RTL specifies otherwise.
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+External memory bridge
+
+RTL header notes:
+- pp_ext_mem — external memory interface stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/pp_ext_mem_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - rdata must equal (32'h1000_0000 ^ 32'hA5A5_A5A5
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Batch verification note: Latch addr; ready next cycle; TB #1
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- Address latched on SETUP phase (psel && !penable).

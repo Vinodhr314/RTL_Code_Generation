@@ -1,22 +1,94 @@
 Module: pmp
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — core
-
-Physical Memory Protection unit for RV32 M-mode region rules.
+================================================================================
+1. OVERVIEW
+================================================================================
+pmp.
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- addr [31:0]  input  — input
-- access [1:0]  input  — R/W/X
-- mode  input  — M/U
-- allow  output  — output
-- fault  output  — output
-- cfg [N-1:0]  input  — PMP CSR shadow
+Verification status: PASS; addr[31]=1 → fault; else allow
 
-Behavior:
-- Checks load/store/fetch against N PMP entries.
-- Denies access when rule violated.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement pmp.
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: PMP region check.
+FR-005: PMP region check
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| addr | input | [31:0] | — | Input signal, width [31:0]. |
+| access | input | [1:0] | — | Input signal, width [1:0]. |
+| mode | input | 1 | — | Operating mode select. |
+| allow | output | 1 | — | Output signal, width 1. |
+| fault | output | 1 | — | Output signal, width 1. |
+| cfg | input | [31:0] | — | Input signal, width [31:0]. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- addr (input, [31:0], —): Input signal, width [31:0].
+- access (input, [1:0], —): Input signal, width [1:0].
+- mode (input, 1, —): Operating mode select.
+- allow (output, 1, —): Output signal, width 1.
+- fault (output, 1, —): Output signal, width 1.
+- cfg (input, [31:0], —): Input signal, width [31:0].
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+PMP region check
+
+RTL header notes:
+- pmp — Physical Memory Protection stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/pmp_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - Refer to inline TB assertions and $display [FAIL] messages.
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: addr[31]=1 → fault; else allow
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

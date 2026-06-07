@@ -1,21 +1,120 @@
 Module: bch_encoder
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — algorithm
-
-BCH forward error correction encoder for flash/link protection.
+================================================================================
+1. OVERVIEW
+================================================================================
+BCH(15,5,3) systematic encoder. Accepts 5 data bits (data_in[4:0]), outputs 15-bit codeword when done..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- data_in [7:0]  input  — input
-- valid  input  — input
-- codeword [N-1:0]  output  — output
-- done  output  — output
+Verification status: PASS
 
-Behavior:
-- Configurable BCH(n,k,t); adds parity bits to data block.
-- Paired with BCH decoder in storage subsystem.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement BCH(15,5,3) systematic encoder. Accepts 5 data bits (data_in[4:0]), outputs 15-bit codeword when done..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: BCH(15,5,3): g(x)=x^10+x^8+x^5+x^4+x^2+x+1. Uses data_in[4:0] as 5 message bits. Parity computed combinatorially on vali.
+FR-005: BCH(15,5,3): g(x)=x^10+x^8+x^5+x^4+x^2+x+1. Uses data_in[4:0] as 5 message bits. Parity computed combinatorially on valid; done asserts one 
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| data_in | input | [7:0] | — | Input port ([7:0]); see functional behavior. |
+| valid | input | 1 | active-high | Source-valid handshake; data/control is qualified when high. |
+| codeword | output | [14:0] | — | Output signal, width [14:0]. |
+| done | output | 1 | — | Status flag: operation completed successfully. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- data_in (input, [7:0], —): Input port ([7:0]); see functional behavior.
+- valid (input, 1, active-high): Source-valid handshake; data/control is qualified when high.
+- codeword (output, [14:0], —): Output signal, width [14:0].
+- done (output, 1, —): Status flag: operation completed successfully.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+BCH(15,5,3): g(x)=x^10+x^8+x^5+x^4+x^2+x+1. Uses data_in[4:0] as 5 message bits. Parity computed combinatorially on valid; done asserts one cycle after valid. Codeword = {data[4:0], parity[9:0]}.
+
+RTL header notes:
+- bch_encoder — BCH(15,5,3) systematic encoder (Verilog-2005)
+- Generator: g(x) = x^10 + x^8 + x^5 + x^4 + x^2 + x + 1
+- Uses data_in[4:0] as 5 message bits; outputs 15-bit codeword.
+- Parity columns (x^(10+i) mod g(x)):
+- d[4] x^14: x^9+x^7+x^4+x^3+x+1       = 10'h29B
+- d[3] x^13: x^9+x^8+x^7+x^6+x^4+x^2+x = 10'h3D6
+- d[2] x^12: x^8+x^7+x^6+x^5+x^3+x+1   = 10'h1EB
+- d[1] x^11: x^9+x^6+x^5+x^3+x^2+x     = 10'h26E
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/bch_encoder_tb.v
+
+6.2 Test Scenarios
+  TS-01: BCH(15,5,3) encoder TB
+  TS-02: Parity columns (x^(10+i) mod g(x)):
+  TS-03: d[4]=1: parity=10'h29B  -> codeword = {5'h10, 10'h29B} = 15'h429B
+  TS-04: d[3]=1: parity=10'h3D6  -> codeword = {5'h08, 10'h3D6} = 15'h23D6 (but 5'b01000 = 8, so {8,0x3D6}=0x23D6? Let me recalculate)
+  TS-05: Actually codeword = {data[4:0], parity[9:0]}
+  TS-06: data=5'b00001 (d[0]=1): parity=0x137 -> codeword={5'h01, 10'h137}=0x0537
+  TS-07: data=5'b00010 (d[1]=1): parity=0x26E -> codeword={5'h02, 10'h26E}=0x0A6E? 5'b00010<<10 = 0x0800, |0x26E = 0x0A6E
+  TS-08: data=5'b00100 (d[2]=1): parity=0x1EB -> codeword={5'h04, 10'h1EB}=0x11EB (5'b00100<<10=0x1000, |0x1EB=0x11EB)
+  TS-09: data=5'b01000 (d[3]=1): parity=0x3D6 -> codeword={5'h08, 10'h3D6}=0x23D6 (5'b01000<<10=0x2000, |0x3D6=0x23D6)
+  TS-10: data=5'b10000 (d[4]=1): parity=0x29B -> codeword={5'h10, 10'h29B}=0x429B (5'b10000<<10=0x4000, |0x29B=0x429B)
+  TS-11: data=5'b11111: parity = XOR of all 5 = 0x29B^0x3D6^0x1EB^0x26E^0x137 = ?
+  TS-12: 0x29B ^ 0x3D6 = 0x14D
+
+6.3 Expected Results / Scoreboard
+  - done must equal 1'b1
+  - codeword must equal expected_cw
+  - done must equal 1'b0
+  - check(8'h00, 15'h0000, 1)
+  - check(8'h01, 15'h0537, 2)
+  - check(8'h02, 15'h0A6E, 3)
+  - check(8'h04, 15'h11EB, 4)
+  - check(8'h08, 15'h23D6, 5)
+  - check(8'h10, 15'h429B, 6)
+  - check(8'h1F, 15'h7FFF, 7)
+  - check(8'hE1, 15'h0537, 8)
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+  - All TB tasks exercised: encode_check
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.

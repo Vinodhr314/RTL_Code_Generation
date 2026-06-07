@@ -1,24 +1,98 @@
 Module: frame_formatter
+Document: Design Specification for Verification (DSV)
+Revision: 1.0
+Target: 32-bit RISC-V SoC
+Protocol/Standard: None (combinational logic)
 
-Target: 32-bit RISC-V SoC — network
-
-Formats outbound/inbound frames with header, payload length, and CRC slot for MAC/DMA.
+================================================================================
+1. OVERVIEW
+================================================================================
+Ethernet frame formatter with header prepending and length tracking..
 
 Integration context:
 - Part of the RV32 platform address map and interrupt fabric
 - Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
 
-Ports:
-- clk  input  — input
-- rst_n  input  — input
-- in_valid  input  — input
-- in_data [31:0]  input  — input
-- in_last  input  — input
-- out_valid  output  — output
-- out_data [31:0]  output  — output
-- out_last  output  — output
-- frame_len [15:0]  output  — output
+Verification status: PASS; 2-stage pipeline: header 0xAABBCCDD then payload; frame_len=8
 
-Behavior:
-- Prepends Ethernet-style header fields; aligns to 32-bit RV32 word boundaries.
-- Handshakes with TX MAC and packet buffer.
+================================================================================
+2. FUNCTIONAL REQUIREMENTS
+================================================================================
+FR-001: Module shall implement Ethernet frame formatter with header prepending and length tracking..
+FR-002: Outputs shall be purely combinational with no clock or reset dependency.
+FR-003: All port widths shall match the locked specification exactly.
+FR-004: Functional relation: Prepends header 0xAABBCCDD on first word; passthrough payload; frame_len=word_count*4 on in_last..
+FR-005: Prepends header 0xAABBCCDD on first word; passthrough payload; frame_len=word_count*4 on in_last.
+
+================================================================================
+3. INTERFACE SPECIFICATION
+================================================================================
+3.1 Port Summary Table
+| Port | Direction | Width | Active | Description |
+|------|-----------|-------|--------|-------------|
+| clk | input | 1 | — | System clock; all sequential logic sampled on rising edge unless noted. |
+| rst_n | input | 1 | active-low | Asynchronous active-low reset; deassert synchronously to clk. |
+| in_valid | input | 1 | — | Input signal, width 1. |
+| in_data | input | [31:0] | — | Input signal, width [31:0]. |
+| in_last | input | 1 | — | Input port (1); see functional behavior. |
+| out_valid | output | 1 | — | Output signal, width 1. |
+| out_data | output | [31:0] | — | Output signal, width [31:0]. |
+| out_last | output | 1 | — | Output signal, width 1. |
+| frame_len | output | [15:0] | — | Output port ([15:0]); see functional behavior. |
+
+3.2 Signal Descriptions
+- clk (input, 1, —): System clock; all sequential logic sampled on rising edge unless noted.
+- rst_n (input, 1, active-low): Asynchronous active-low reset; deassert synchronously to clk.
+- in_valid (input, 1, —): Input signal, width 1.
+- in_data (input, [31:0], —): Input signal, width [31:0].
+- in_last (input, 1, —): Input port (1); see functional behavior.
+- out_valid (output, 1, —): Output signal, width 1.
+- out_data (output, [31:0], —): Output signal, width [31:0].
+- out_last (output, 1, —): Output signal, width 1.
+- frame_len (output, [15:0], —): Output port ([15:0]); see functional behavior.
+
+================================================================================
+4. TIMING, CLOCKING & RESET
+================================================================================
+Clock domain: none — purely combinational.
+Reset: none.
+DV note: Allow #1 propagation delay after input changes before sampling outputs (per TB).
+
+================================================================================
+5. FUNCTIONAL BEHAVIOR
+================================================================================
+Prepends header 0xAABBCCDD on first word; passthrough payload; frame_len=word_count*4 on in_last.
+
+RTL header notes:
+- frame_formatter — Ethernet frame formatter stub (Verilog-2005)
+
+================================================================================
+6. VERIFICATION GUIDANCE
+================================================================================
+6.1 Reference Testbench: tb/frame_formatter_tb.v
+
+6.2 Test Scenarios
+  TS-01: Run full TB initial block — covers reset, functional stimulus, and checks.
+
+6.3 Expected Results / Scoreboard
+  - frame_len must equal 16'd8
+
+6.4 Pass Criteria
+  Simulation must print 'ALL TESTS PASSED' and produce zero [FAIL] messages.
+
+6.5 Coverage Suggestions
+  - Reset/deassertion behavior
+  - All functional requirements FR-xxx
+  - Boundary values on data ports (min, max, all-ones, all-zeros)
+
+================================================================================
+7. ASSUMPTIONS, LIMITATIONS & OUT OF SCOPE
+================================================================================
+- Zero propagation delay in RTL; TB uses #1 delay for race avoidance.
+- Batch verification note: 2-stage pipeline: header 0xAABBCCDD then payload; frame_len=8
+- Out of scope: power analysis, formal verification, gate-level timing closure.
+
+================================================================================
+8. RTL IMPLEMENTATION NOTES
+================================================================================
+- See rtl source for structural implementation details.
