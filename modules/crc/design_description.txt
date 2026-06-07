@@ -1,0 +1,22 @@
+Module: crc
+
+Target: 32-bit RISC-V SoC — algorithm
+
+CRC generator/checker (CRC-32 Ethernet default, param poly).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- data [7:0]  input  — input
+- valid  input  — input
+- init  input  — input
+- crc [31:0]  output  — output
+- done  output  — output
+
+Behavior:
+- Bit/byte serial CRC; init on frame start.
+- Used by MAC, storage, and packet buffer.

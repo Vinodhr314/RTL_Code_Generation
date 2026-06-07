@@ -1,0 +1,19 @@
+Module: barrel_shifter
+
+Target: 32-bit RISC-V SoC — datapath
+
+32-bit barrel shifter for ALU and crypto (logical/arithmetic, left/right).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- a [31:0]  input  — input
+- shamt [4:0]  input  — shift amount
+- op [1:0]  input  — op type
+- y [31:0]  output  — output
+
+Behavior:
+- Combinational: SLL/SRL/SRA compatible with RV32I shift ops.
+- Used in ALU, multiplier, and crypto paths.

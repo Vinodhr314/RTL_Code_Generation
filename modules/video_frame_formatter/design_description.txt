@@ -1,0 +1,24 @@
+Module: video_frame_formatter
+
+Target: 32-bit RISC-V SoC — media
+
+Formats raw pixel streams into frame lines with sync/porch for display output.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- pixel [23:0]  input  — RGB
+- valid  input  — input
+- hsync  output  — output
+- vsync  output  — output
+- de  output  — data enable
+- line [11:0]  output  — output
+- frame [11:0]  output  — output
+
+Behavior:
+- Generates timing for configured resolution; buffers line via FIFO.
+- DMA feeds pixel data from RV32 memory.

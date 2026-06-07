@@ -1,0 +1,25 @@
+Module: cordic
+
+Target: 32-bit RISC-V SoC — algorithm
+
+CORDIC rotator for sin/cos/atan and vector rotation without multiplier.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- start  input  — input
+- mode [1:0]  input  — rot/vector
+- x_in [31:0]  input  — fixed-point
+- y_in [31:0]  input  — input
+- z_in [31:0]  input  — angle
+- x_out [31:0]  output  — output
+- y_out [31:0]  output  — output
+- done  output  — output
+
+Behavior:
+- Iterative CORDIC in 16–24 stages; Q-format configurable.
+- Used by graphics, motor control, and PHY calibration.

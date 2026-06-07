@@ -1,0 +1,23 @@
+Module: debug_module
+
+Target: 32-bit RISC-V SoC — debug
+
+RISC-V Debug Module 0.13 (halt, resume, abstract GPR access).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- dmi  input  — from JTAG DTM
+- halt_req  output  — output
+- resume_req  output  — output
+- halted  input  — from core
+- abstract_data [31:0]  inout  — inout
+- error  output  — output
+
+Behavior:
+- Implements DM registers; controls RV32 hart halt/resume.
+- Exposes GPR/FPR via abstract command FSM.

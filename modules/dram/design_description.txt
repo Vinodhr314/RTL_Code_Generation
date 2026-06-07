@@ -1,0 +1,19 @@
+Module: dram
+
+Target: 32-bit RISC-V SoC — memory
+
+Generic DRAM controller front-end (AXI slave to SDRAM/DDR PHY).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- aclk  input  — input
+- aresetn  input  — input
+- AXI4  slave  — slave
+- sdram/dram  command  — pins
+
+Behavior:
+- Abstract DRAM ctrl; pair with ddr3_controller for DDR3 silicon.
+- Maps RV32 physical memory region.

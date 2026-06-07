@@ -1,0 +1,20 @@
+Module: zilla_irq
+
+Target: 32-bit RISC-V SoC — core
+
+Custom Zilla interrupt distribution unit for multi-source RV32 IRQ fan-in.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- src [31:0]  input  — IRQ bitmap
+- vec [7:0]  output  — highest priority vector
+- valid  output  — output
+
+Behavior:
+- Fast priority decode over 32 sources.
+- Pairs with interrupt_controller or replaces PLIC slice.

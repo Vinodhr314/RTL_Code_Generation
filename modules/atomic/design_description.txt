@@ -1,0 +1,24 @@
+Module: atomic
+
+Target: 32-bit RISC-V SoC — core
+
+RV32 A-extension atomic memory operation helper (LR/SC, AMO).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- amo_op [2:0]  input  — input
+- addr [31:0]  input  — input
+- wdata [31:0]  input  — input
+- valid  input  — input
+- rdata [31:0]  output  — output
+- success  output  — SC success
+- done  output  — output
+
+Behavior:
+- Implements AMO swap/add/and/or/xor and LR/SC reservation logic.
+- Interfaces with L1 or bus snoop for exclusives.

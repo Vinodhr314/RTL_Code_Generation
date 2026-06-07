@@ -1,0 +1,23 @@
+Module: pp
+
+Target: 32-bit RISC-V SoC — datapath
+
+Processing pipeline stage wrapper for multi-stage RV32 datapath or accelerator front-end.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- valid_in  input  — input
+- ready_out  output  — output
+- data_in [31:0]  input  — input
+- valid_out  output  — output
+- ready_in  input  — input
+- data_out [31:0]  output  — output
+
+Behavior:
+- Skid buffer / pipeline register with valid-ready handshake.
+- Decouples combinational logic between RV32 pipeline stages.

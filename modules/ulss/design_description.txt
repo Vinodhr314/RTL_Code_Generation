@@ -1,0 +1,21 @@
+Module: ulss
+
+Target: 32-bit RISC-V SoC — system
+
+Ultra-low-power sleep supervisor coordinating RV32 WFI and clock gating.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- wfi  input  — from core
+- wake [N-1:0]  input  — input
+- sleep  output  — output
+- clk_gate  output  — output
+
+Behavior:
+- Enters retention when core asserts WFI and no pending IRQ.
+- Wake on timer, GPIO, or UART edge.

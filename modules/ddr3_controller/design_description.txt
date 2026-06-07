@@ -1,0 +1,24 @@
+Module: ddr3_controller
+
+Target: 32-bit RISC-V SoC — memory
+
+DDR3 memory controller with AXI front-end for RV32 main memory.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- aclk  input  — input
+- aresetn  input  — input
+- AXI4  slave  — from CPU/DMA
+- ddr_ck  output  — output
+- ddr_cke  output  — output
+- ddr_addr [14:0]  output  — output
+- ddr_ba [2:0]  output  — output
+- ddr_dq [31:0]  inout  — inout
+- init_done  input  — input
+
+Behavior:
+- AXI-to-DDR3 protocol bridge; burst INCR read/write.
+- Assumes ddr3_boot_up completed successfully.

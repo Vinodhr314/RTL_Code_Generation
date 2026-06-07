@@ -1,0 +1,21 @@
+Module: ddr3_boot_up
+
+Target: 32-bit RISC-V SoC — memory
+
+DDR3 initialization sequence (ZQ cal, mode reg, leveling) before RV32 fetch.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- start  input  — input
+- done  output  — output
+- fail  output  — output
+- status [7:0]  output  — output
+
+Behavior:
+- Runs JEDEC reset and init FSM; releases mem_ctrl when complete.
+- Required before executing from DRAM.

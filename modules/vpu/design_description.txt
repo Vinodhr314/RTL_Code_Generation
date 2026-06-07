@@ -1,0 +1,22 @@
+Module: vpu
+
+Target: 32-bit RISC-V SoC — accelerator
+
+Vector processing unit for short SIMD lanes (e.g. 4x8-bit or 2x16-bit) on RV32.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- valid  input  — input
+- op [3:0]  input  — vector op
+- a [31:0]  input  — input
+- b [31:0]  input  — input
+- result [31:0]  output  — output
+- done  output  — output
+
+Behavior:
+- Lightweight SIMD for media/kernel helpers adjacent to scalar core.

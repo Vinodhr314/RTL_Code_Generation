@@ -1,0 +1,29 @@
+Module: mem_ctrl
+
+Target: 32-bit RISC-V SoC — memory
+
+Memory controller aggregating SRAM/ROM/ peripheral regions for RV32 address map.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- cpu_addr [31:0]  input  — input
+- cpu_wdata [31:0]  input  — input
+- cpu_wen  input  — input
+- cpu_ren  input  — input
+- cpu_rdata [31:0]  output  — output
+- cpu_ready  output  — output
+- ext_addr [31:0]  output  — output
+- ext_wdata [31:0]  output  — output
+- ext_wen  output  — output
+- ext_ren  output  — output
+- ext_rdata [31:0]  input  — input
+- ext_ready  input  — input
+
+Behavior:
+- Decode RV32 load/store to on-chip SRAM, boot ROM, and external ports.
+- Supports byte/half/word access with proper masking.

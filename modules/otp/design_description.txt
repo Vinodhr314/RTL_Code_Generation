@@ -1,0 +1,22 @@
+Module: otp
+
+Target: 32-bit RISC-V SoC — security
+
+One-time-programmable memory interface for chip ID, trim, and secure boot keys.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- addr [7:0]  input  — input
+- read  input  — input
+- rdata [31:0]  output  — output
+- busy  output  — output
+- error  output  — output
+
+Behavior:
+- Read-only access to OTP macro; write disabled after fab.
+- Boot ROM reads chip ID and root key at reset.

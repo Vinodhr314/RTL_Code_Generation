@@ -1,0 +1,25 @@
+Module: packet_buffer
+
+Target: 32-bit RISC-V SoC — network
+
+Dual-port SRAM packet buffer for RX/TX Ethernet frames.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- wr_en  input  — input
+- wr_addr [11:0]  input  — input
+- wr_data [31:0]  input  — input
+- rd_en  input  — input
+- rd_addr [11:0]  input  — input
+- rd_data [31:0]  output  — output
+- full  output  — output
+- empty  output  — output
+
+Behavior:
+- 4 KB default buffer; CPU/DMA read/write ports.
+- Decouples MAC from RV32 stack processing.

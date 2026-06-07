@@ -1,0 +1,24 @@
+Module: adder_8bit
+
+Target: 32-bit RISC-V SoC — byte-lane and lightweight datapath building block
+
+Design an 8-bit unsigned ripple-carry adder used in peripheral byte lanes,
+address offset calculation, and narrow arithmetic helpers around the RV32 core.
+
+Integration context: 
+- Feeds byte-wise ALU helpers, FIFO pointer math, and narrow counter updates
+- Complements the 32-bit adders in the main integer datapath (ALU, PC+4, AGU)
+
+Ports: 
+- a [7:0]   input  — first operand (byte or narrow immediate lane)
+- b [7:0]   input  — second operand
+- sum [8:0] output — 9-bit result (8-bit sum plus carry-out)
+
+Behavior: 
+- Combinational: sum = a + b (unsigned addition)
+- Carry-out on bit [8] supports chained byte adders or overflow detect
+- No clock or reset required
+
+Coding notes: 
+- Verilog-2005, synthesizable, no latches
+- Explicit widths on all ports

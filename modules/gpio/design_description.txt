@@ -1,0 +1,22 @@
+Module: gpio
+
+Target: 32-bit RISC-V SoC — peripheral
+
+General-purpose IO with direction, pull, and interrupt on edge.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- gpio [31:0]  inout  — pads
+- dir [31:0]  input  — output enable
+- out [31:0]  input  — output data
+- in [31:0]  output  — sampled input
+- irq [31:0]  output  — edge detect
+
+Behavior:
+- 32-bit GPIO bank; memory-mapped via APB.
+- Used for board LEDs, straps, and wake sources.

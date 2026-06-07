@@ -1,0 +1,27 @@
+Module: apb_arbiter
+
+Target: 32-bit RISC-V SoC — bus
+
+APB bus arbiter multiplexing multiple RV32/APB masters onto one slave bus.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- m_req [M-1:0]  input  — master requests
+- m_grant [M-1:0]  output  — output
+- m_paddr [M-1:0][11:0]  input  — input
+- s_paddr [11:0]  output  — output
+- s_psel  output  — output
+- s_penable  output  — output
+- s_pwrite  output  — output
+- s_pwdata [31:0]  output  — output
+- s_prdata [31:0]  input  — input
+- s_pready  input  — input
+
+Behavior:
+- Fixed-priority or round-robin APB arbitration.
+- Connects debug, DMA, and secondary masters.

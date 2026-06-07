@@ -1,0 +1,24 @@
+Module: fpu
+
+Target: 32-bit RISC-V SoC — accelerator
+
+IEEE-754 single-precision floating-point unit (add, sub, mul, div) for RV32F.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- valid  input  — input
+- op [2:0]  input  — FADD/FSUB/FMUL/FDIV
+- a [31:0]  input  — float32
+- b [31:0]  input  — float32
+- result [31:0]  output  — float32
+- ready  output  — output
+- flags [4:0]  output  — IEEE flags
+
+Behavior:
+- Pipelined or multi-cycle FPU coprocessor interface.
+- Supports RV32F F-extension register file offload.

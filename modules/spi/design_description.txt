@@ -1,0 +1,26 @@
+Module: spi
+
+Target: 32-bit RISC-V SoC — peripheral
+
+SPI master controller for flash and sensor attachment.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- sck  output  — output
+- mosi  output  — output
+- miso  input  — input
+- cs_n [3:0]  output  — chip selects
+- tx [7:0]  input  — input
+- rx [7:0]  output  — output
+- busy  output  — output
+- done  output  — output
+- irq  output  — output
+
+Behavior:
+- Mode 0 default; programmable clock divider.
+- APB memory map; supports flash XIP optional.

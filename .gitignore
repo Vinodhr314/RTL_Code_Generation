@@ -1,0 +1,10 @@
+# Track only rtl/, modules/, and tb/
+*
+
+!.gitignore
+!rtl/
+!rtl/**
+!modules/
+!modules/**
+!tb/
+!tb/**

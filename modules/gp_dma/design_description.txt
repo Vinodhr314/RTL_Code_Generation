@@ -1,0 +1,30 @@
+Module: gp_dma
+
+Target: 32-bit RISC-V SoC — dma
+
+General-purpose DMA engine for memory-to-memory and memory-to-peripheral transfers.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- start  input  — input
+- src [31:0]  input  — input
+- dst [31:0]  input  — input
+- len [15:0]  input  — byte count
+- done  output  — output
+- busy  output  — output
+- irq  output  — output
+- mem_addr [31:0]  output  — output
+- mem_wdata [31:0]  output  — output
+- mem_wen  output  — output
+- mem_ren  output  — output
+- mem_rdata [31:0]  input  — input
+- mem_ready  input  — input
+
+Behavior:
+- Single-channel GP-DMA with programmable src/dst/length registers.
+- Releases RV32 core from bulk memcpy.

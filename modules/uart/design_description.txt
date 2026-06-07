@@ -1,0 +1,28 @@
+Module: uart
+
+Target: 32-bit RISC-V SoC — peripheral
+
+Universal asynchronous receiver/transmitter with configurable baud, TX/RX FIFOs, and interrupt on frame complete.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — active-low async reset
+- tx  input  — serial transmit bit
+- rx  output  — serial receive bit
+- pwdata [31:0]  input  — APB write data
+- paddr [11:0]  input  — APB address
+- pwrite  input  — input
+- psel  input  — input
+- penable  input  — input
+- prdata [31:0]  output  — APB read data
+- pready  output  — output
+- irq  output  — interrupt when TX empty or RX data ready
+
+Behavior:
+- APB-programmable 16550-style UART for RV32 debug and host communication.
+- Baud derived from SoC clock via divisor register.
+- Supports 8N1 default framing.

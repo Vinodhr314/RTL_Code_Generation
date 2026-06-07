@@ -1,0 +1,21 @@
+Module: csr
+
+Target: 32-bit RISC-V SoC — core
+
+Control/status register file interface for RV32 privileged CSRs.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- csr_addr [11:0]  input  — input
+- csr_wdata [31:0]  input  — input
+- csr_op [1:0]  input  — R/W/Set/Clear
+- csr_rdata [31:0]  output  — output
+- illegal  output  — output
+
+Behavior:
+- Decodes CSR address; read/write mstatus, mie, mtvec, etc.
+- Signals illegal instruction on bad CSR/ privilege.

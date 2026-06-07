@@ -1,0 +1,23 @@
+Module: comp_isa
+
+Target: 32-bit RISC-V SoC — accelerator
+
+Custom compressed-ISA decode assist or coprocessor for custom RV32 extensions.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- inst [31:0]  input  — custom instruction
+- valid  input  — input
+- rs1 [31:0]  input  — input
+- rs2 [31:0]  input  — input
+- rd [31:0]  output  — output
+- rd_valid  output  — output
+
+Behavior:
+- Decodes vendor custom opcode space; returns result to RV32 writeback.
+- Supports fused ops defined in platform spec.

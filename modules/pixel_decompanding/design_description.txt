@@ -1,0 +1,21 @@
+Module: pixel_decompanding
+
+Target: 32-bit RISC-V SoC — media
+
+Expands compressed pixel formats (e.g. 10-bit in 8-bit container) for display pipe.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- comp [15:0]  input  — input
+- valid  input  — input
+- pixel [23:0]  output  — expanded RGB
+- valid_out  output  — output
+
+Behavior:
+- Linear or gamma-aware decompanding lookup.
+- Feeds video_frame_formatter.

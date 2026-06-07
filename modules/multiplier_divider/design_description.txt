@@ -1,0 +1,22 @@
+Module: multiplier_divider
+
+Target: 32-bit RISC-V SoC — datapath
+
+Combined 32x32 multiplier and divider unit for RV32 M-extension.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- op [2:0]  input  — MUL/DIV/REM
+- a [31:0]  input  — input
+- b [31:0]  input  — input
+- result [31:0]  output  — output
+- done  output  — output
+
+Behavior:
+- Shared datapath for MUL, MULH, DIV, REM, DIVU, REMU.
+- Single issue port from RV32 execute stage.

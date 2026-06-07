@@ -1,0 +1,19 @@
+Module: hpdmc_latest
+
+Target: 32-bit RISC-V SoC — memory
+
+High-performance DRAM controller (latest rev) with optimized refresh.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- aclk  input  — input
+- aresetn  input  — input
+- AXI  slave  — slave
+- dram  PHY  — pins
+
+Behavior:
+- Successor to baseline DRAM ctrl; lower latency for RV32 L1 miss.
+- Supports auto-precharge and bank interleaving.

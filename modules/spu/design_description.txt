@@ -1,0 +1,25 @@
+Module: spu
+
+Target: 32-bit RISC-V SoC — accelerator
+
+Signal processing unit for fixed-point DSP ops (MAC, accumulate) offloaded from the RV32 core.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- start  input  — kick operation
+- op_sel [3:0]  input  — operation select
+- a [31:0]  input  — operand A
+- b [31:0]  input  — operand B
+- result [31:0]  output  — output
+- done  output  — output
+- busy  output  — output
+- irq  output  — output
+
+Behavior:
+- Single-issue MAC/accumulate engine with memory-mapped control.
+- Results visible to core via CSR or DMA buffer.

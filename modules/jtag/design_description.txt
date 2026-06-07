@@ -1,0 +1,21 @@
+Module: jtag
+
+Target: 32-bit RISC-V SoC — debug
+
+JTAG TAP controller for RV32 debug (DTM) and boundary scan.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- tck  input  — input
+- tms  input  — input
+- tdi  input  — input
+- tdo  output  — output
+- trst_n  input  — optional
+- debug_req  output  — to debug module
+
+Behavior:
+- IEEE 1149.1 TAP; shifts DR/IR for RISC-V Debug Spec access.
+- Connects to Debug Module and optional BSCAN.

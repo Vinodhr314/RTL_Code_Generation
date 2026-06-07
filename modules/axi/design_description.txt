@@ -1,0 +1,16 @@
+Module: axi
+
+Target: 32-bit RISC-V SoC — bus
+
+AXI4 interface definition / reusable AXI channel bundle module.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- Standard  AXI4  — AW/W/B/AR/R channel signals 32-bit data
+
+Behavior:
+- Reference AXI4 port list for RV32 SoC integration.
+- Use as template for master/slave stubs.

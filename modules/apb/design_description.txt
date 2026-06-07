@@ -1,0 +1,16 @@
+Module: apb
+
+Target: 32-bit RISC-V SoC — bus
+
+APB interface definition / reusable APB bundle for peripherals.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- pclk,  presetn,  — paddr, psel, penable, pwrite, pwdata, prdata, pready
+
+Behavior:
+- APB3/4 signal bundle for UART, GPIO, timers.
+- Single-cycle data phase after setup.

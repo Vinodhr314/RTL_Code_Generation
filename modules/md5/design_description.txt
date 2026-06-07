@@ -1,0 +1,22 @@
+Module: md5
+
+Target: 32-bit RISC-V SoC — crypto
+
+MD5 hash core for legacy checksum (non-security-critical use).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- start  input  — input
+- block [511:0]  input  — 512-bit block
+- digest [127:0]  output  — output
+- done  output  — output
+- busy  output  — output
+
+Behavior:
+- Processes one 512-bit block per message segment.
+- Software feeds padded message via DMA.

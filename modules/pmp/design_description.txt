@@ -1,0 +1,22 @@
+Module: pmp
+
+Target: 32-bit RISC-V SoC — core
+
+Physical Memory Protection unit for RV32 M-mode region rules.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- addr [31:0]  input  — input
+- access [1:0]  input  — R/W/X
+- mode  input  — M/U
+- allow  output  — output
+- fault  output  — output
+- cfg [N-1:0]  input  — PMP CSR shadow
+
+Behavior:
+- Checks load/store/fetch against N PMP entries.
+- Denies access when rule violated.

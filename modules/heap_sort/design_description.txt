@@ -1,0 +1,26 @@
+Module: heap_sort
+
+Target: 32-bit RISC-V SoC — algorithm accelerator / reference RTL
+
+Heap Sort: Build max-heap and extract; sort N 32-bit words descending/ascending.
+
+Integration context:
+- Exposed as memory-mapped accelerator or standalone test module for RV32 validation
+- Parameters: N (array size), DATA_W=32 default
+
+Ports:
+- clk        input 1   — system clock
+- rst_n      input 1   — async active-low reset
+- start      input 1   — begin operation
+- base_addr  [31:0] input — pointer to data structure in RV32 memory space
+- length     [15:0] input — element count or problem size
+- done       output 1  — operation complete
+- busy       output 1  — operation in progress
+- result     [31:0] output — primary result (index, gcd, count, etc.)
+- irq        output 1  — optional completion interrupt
+
+Behavior:
+- Reads/writes data via external memory interface or direct array ports (param ARRAY_MODE)
+- Implements Heap Sort per standard algorithm definition
+- Completes with done=1; sets result register for software poll
+- Verilog-2005 synthesizable; FSM or microcoded control acceptable

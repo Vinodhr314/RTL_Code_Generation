@@ -1,0 +1,23 @@
+Module: cmu
+
+Target: 32-bit RISC-V SoC — clock
+
+Clock management unit: PLL control, clock gating, and divider for RV32 SoC domains.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk_ref  input  — reference clock
+- rst_n  input  — input
+- clk_cpu  output  — RV32 core clock
+- clk_bus  output  — AXI/APB bus clock
+- clk_periph  output  — peripheral clock
+- pll_lock  output  — output
+- cfg [15:0]  input  — configuration
+- cfg_wr  input  — input
+
+Behavior:
+- Generates gated/divided clocks for core, bus, and peripherals.
+- Supports software clock enable per domain.

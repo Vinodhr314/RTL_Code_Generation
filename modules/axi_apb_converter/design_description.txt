@@ -1,0 +1,21 @@
+Module: axi_apb_converter
+
+Target: 32-bit RISC-V SoC — bus
+
+AXI4 to APB bridge for RV32 peripheral access.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- aclk  input  — input
+- aresetn  input  — input
+- AXI4  slave  — ports
+- pclk  output  — output
+- presetn  output  — output
+- APB  master  — ports
+
+Behavior:
+- Translates AXI single-beat or narrow bursts to APB transactions.
+- Typical path: CPU -> AXI -> APB -> UART/GPIO.

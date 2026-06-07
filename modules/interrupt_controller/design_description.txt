@@ -1,0 +1,24 @@
+Module: interrupt_controller
+
+Target: 32-bit RISC-V SoC — core
+
+Platform interrupt controller for RV32 external/local IRQ aggregation.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- irq_in [N-1:0]  input  — level/edge sources
+- irq_out  output  — to core
+- priority [7:0]  input  — per source
+- mask [N-1:0]  input  — input
+- pending [N-1:0]  output  — output
+- claim [7:0]  output  — ID
+- ack  input  — input
+
+Behavior:
+- Priority encoder; memory-mapped CLAIM/ACK for vectored interrupts.
+- Compatible with PLIC-style or custom PIC.

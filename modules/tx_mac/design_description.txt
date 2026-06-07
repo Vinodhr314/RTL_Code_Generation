@@ -1,0 +1,24 @@
+Module: tx_mac
+
+Target: 32-bit RISC-V SoC — network
+
+Ethernet transmit MAC: preamble, SFD, FCS, GMII/MII output.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- tx_start  input  — input
+- tx_data [7:0]  input  — input
+- tx_valid  input  — input
+- tx_last  input  — input
+- tx_ready  output  — output
+- gmii_txd [7:0]  output  — output
+- gmii_tx_en  output  — output
+
+Behavior:
+- Accepts frame from packet buffer; appends CRC.
+- Handshakes with frame_formatter upstream.

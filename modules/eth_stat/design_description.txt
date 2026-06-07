@@ -1,0 +1,25 @@
+Module: eth_stat
+
+Target: 32-bit RISC-V SoC — network
+
+Ethernet MAC statistics counter block (frames, errors, bytes).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- rx_frame  input  — pulse per frame
+- tx_frame  input  — input
+- rx_err  input  — input
+- tx_err  input  — input
+- byte_cnt [31:0]  output  — output
+- frame_cnt [31:0]  output  — output
+- err_cnt [31:0]  output  — output
+- clear  input  — input
+
+Behavior:
+- Software-readable via APB; used by network stack on RV32.
+- Counts cleared on write to CLEAR reg.

@@ -1,0 +1,20 @@
+Module: axi_axi_arbiter_4_7_config
+
+Target: 32-bit RISC-V SoC — bus
+
+Configurable AXI4 crossbar arbiter (4 masters, 7 slaves).
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- aclk  input  — input
+- aresetn  input  — input
+- 4  AXI  — master inputs
+- 7  AXI  — slave outputs
+- cfg [31:0]  input  — arbitration mode
+
+Behavior:
+- Round-robin or QoS arbitration; address decode to 7 slave regions.
+- Central SoC interconnect for RV32 platform.

@@ -1,0 +1,24 @@
+Module: frame_formatter
+
+Target: 32-bit RISC-V SoC — network
+
+Formats outbound/inbound frames with header, payload length, and CRC slot for MAC/DMA.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- in_valid  input  — input
+- in_data [31:0]  input  — input
+- in_last  input  — input
+- out_valid  output  — output
+- out_data [31:0]  output  — output
+- out_last  output  — output
+- frame_len [15:0]  output  — output
+
+Behavior:
+- Prepends Ethernet-style header fields; aligns to 32-bit RV32 word boundaries.
+- Handshakes with TX MAC and packet buffer.

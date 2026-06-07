@@ -1,0 +1,25 @@
+Module: async_fifo
+
+Target: 32-bit RISC-V SoC — infrastructure
+
+Asynchronous FIFO for clock-domain crossing between RV32 domains.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- wclk  input  — write clock
+- wrst_n  input  — input
+- winc  input  — input
+- wdata [31:0]  input  — input
+- rclk  input  — read clock
+- rrst_n  input  — input
+- rinc  input  — input
+- rdata [31:0]  output  — output
+- wfull  output  — output
+- rempty  output  — output
+
+Behavior:
+- Gray-code pointer CDC; depth parameterized.
+- Used between core clock and Ethernet/DRAM clocks.

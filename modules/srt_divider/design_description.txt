@@ -1,0 +1,24 @@
+Module: srt_divider
+
+Target: 32-bit RISC-V SoC — datapath
+
+SRT non-restoring 32-bit integer divider for RV32 DIV/REM.
+
+Integration context:
+- Part of the RV32 platform address map and interrupt fabric
+- Follows SoC coding_style.md (Verilog-2005, rst_n active-low where clocked)
+
+Ports:
+- clk  input  — input
+- rst_n  input  — input
+- valid  input  — input
+- dividend [31:0]  input  — input
+- divisor [31:0]  input  — input
+- quotient [31:0]  output  — output
+- remainder [31:0]  output  — output
+- done  output  — output
+- busy  output  — output
+
+Behavior:
+- Radix-2 or radix-4 SRT; handles divide-by-zero per RV32 spec.
+- Multi-cycle; integrates with ALU issue.
